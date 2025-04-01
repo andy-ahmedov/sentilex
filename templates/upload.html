@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentilex: Анализ тональности</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Сброс и общие стили */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      /* Фон с четырьмя радиальными градиентами */
+      background: 
+        radial-gradient(circle at left, #b3bff0, transparent 90%),
+        radial-gradient(circle at right, #b26ff1, transparent 90%);
+      background-blend-mode: screen;
+      color: #0f0e0e;
+      line-height: 1.6;
+    }
+    .outer-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 7rem 1rem;
+    }
+    /* Заголовок и подпись вне белого блока */
+    .header-text {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .header-text h1 {
+      color: #000;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .header-text p {
+      color: #000;
+      font-size: 1rem;
+    }
+    /* Белый блок (карточка) */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card h2 {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .card p.subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    /* Область загрузки файла */
+    .upload-box {
+      border: 2px dashed #d6c9fa;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      transition: background 0.3s;
+      cursor: pointer;
+      margin-bottom: 1.5rem;
+      user-select: none;
+    }
+    .upload-box:hover {
+      background: #f7f3ff;
+    }
+    .upload-box label {
+      color: #9155FD;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .hidden-input {
+      display: none;
+    }
+    /* Блок для ползунка */
+    .slider-section {
+      margin: 1.5rem 0;
+    }
+    .slider-section label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    .slider {
+      flex: 1;
+      margin: 0 1rem;
+    }
+    /* Кнопка с градиентом от #4f46e5 до #9233ea */
+    .submit-btn {
+      display: block;
+      width: 100%;
+      background: linear-gradient(to right, #4f46e5, #9233ea);
+      color: #fff;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 1rem;
+      text-align: center;
+      text-decoration: none;
+    }
+    .submit-btn:hover {
+      background: linear-gradient(to right, #3e38bb, #7a2dc9);
+    }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #84848a;
+      margin: 2rem 0;
+    }
+    /* === Начало стилей для новой шапки === */
+    .main-header {
+    background-color: #fff;        /* Белый фон, как на скриншоте */
+    border-bottom: 2px solid #eee; /* Тонкая нижняя граница */
+    padding: 0.5rem 7rem;          /* Внутренние отступы */
+    }
+
+    .header-content {
+    /* max-width: 600px;      Совпадает с .outer-container */
+    margin: 0 auto;        /* Центрируем по горизонтали */
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;           /* Расстояние между иконкой и текстом */
+    }
+
+    .header-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: #4f46e5;         /* Фиолетовый цвет иконки, можно поменять */
+    }
+    .header-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c2c2c;
+        font-family: 'Inter', sans-serif;
+    }
+/* === Конец стилей для новой шапки === */
+  </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <span class="header-icon">
+            <!-- Вставьте сюда SVG или <img> с вашей иконкой -->
+            <!-- Ниже пример иконки (документ), можно заменить на свою -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 2H14C13.45 2 13 .55 13 0H5C3.9 0 3 .9 3 2v20c0 1.1.9 2 2 2h14c1.1 
+                        0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c0 .55.45 1 1 1h5v4h-6V2zM5 22V2h6v5h7v15H5z"/>
+            </svg>
+            </span>
+            <span class="header-title">Sentilex: Анализ тональности</span>
+        </div>
+        </header>  
+  <div class="outer-container">
+    <!-- Заголовок и подпись вне белого блока -->
+    <div class="header-text">
+      <h1>Интеллектуальный анализ текста</h1>
+      <p>Загрузите текстовый файл и получите подробный анализ эмоциональной окраски содержимого</p>
+    </div>
+    <!-- Белый блок с формой -->
+    <div class="active-container"> 
+        <div class="card">
+            <h2>Загрузка файла и параметры анализа</h2>
+            <p class="subtitle">Загрузите текстовый файл и настройте параметры для анализа тональности</p>
+            <form action="/" method="post" enctype="multipart/form-data">
+                <!-- Область загрузки файла -->
+                <div class="upload-box" onclick="document.getElementById('fileInput').click();">
+                <label for="fileInput" id="uploadLabel">Нажмите для выбора файла (.txt)</label>
+                <input id="fileInput" class="hidden-input" type="file" name="file" accept=".txt" required>
+                </div>
+                <!-- Ползунок с подписью "Размер фрагмента" -->
+                <div class="slider-section">
+                <label for="chunkSizeRange">Размер фрагмента</label>
+                <div class="slider-container">
+                    <span>10</span>
+                    <input class="slider" type="range" name="chunk_size" id="chunkSizeRange" min="10" max="500" value="50" oninput="updateChunkSizeValue(this.value)">
+                    <span>500</span>
+                </div>
+                <p style="text-align:center; margin-top:0.5rem;">Текущее значение: <span id="chunkSizeValue">50</span></p>
+                </div>
+                <button type="submit" class="submit-btn">Анализировать</button>
+            </form>
+            </div>
+        </div>
+        <footer>
+            <span class="footer-text">
+                <p>&copy; 2025 Sentilex Project</p>
+                <span class="footer-text">Современный инструмент для анализа тональности текста</span>
+            </span>
+        </footer>
+    </div>
+  <script>
+    function updateChunkSizeValue(value) {
+      document.getElementById('chunkSizeValue').textContent = value;
+    }
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', function() {
+      if (this.files && this.files.length > 0) {
+        document.getElementById('uploadLabel').textContent = this.files[0].name;
+      }
+    });
+  </script>
+</body>
+</html>

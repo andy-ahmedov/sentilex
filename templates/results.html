@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentilex: Результаты анализа</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Сброс и общие стили */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      /* Фон с четырьмя радиальными градиентами */
+      background: 
+        radial-gradient(circle at left, #b3bff0, transparent 90%),
+        radial-gradient(circle at right, #b26ff1, transparent 90%);
+      background-blend-mode: screen;
+      color: #2c2c2c;
+      line-height: 1.6;
+    }
+    .outer-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    /* Заголовок и подпись вне белого блока */
+    .header-text {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .header-text h1 {
+      color: #000;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .header-text p {
+      color: #000;
+      font-size: 1rem;
+    }
+    /* Белый блок (карточка) */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .card h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .card p {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    ul {
+      list-style: none;
+      margin: 1rem 0;
+      padding: 0;
+    }
+    li {
+      margin: 0.5rem 0;
+    }
+    a {
+      color: #9155FD;
+      font-weight: 500;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .results-link {
+      display: inline-block;
+      margin: 0.5rem 0;
+      padding: 0.6rem 1rem;
+      background: #efebff;
+      border-radius: 6px;
+    }
+    .results-link:hover {
+      background: #e2dbff;
+    }
+    .nav-btn {
+      display: inline-block;
+      margin-top: 2rem;
+      background: linear-gradient(to right, #4f46e5, #9233ea);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .nav-btn:hover {
+      background: linear-gradient(to right, #3e38bb, #7a2dc9);
+    }
+    img {
+      display: block;
+      margin: 1.5rem auto;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #84848a;
+      margin: 2rem 0;
+    }
+    /* === Начало стилей для новой шапки === */
+    .main-header {
+    background-color: #fff;        /* Белый фон, как на скриншоте */
+    border-bottom: 2px solid #eee; /* Тонкая нижняя граница */
+    padding: 0.5rem 7rem;          /* Внутренние отступы */
+    }
+
+    .header-content {
+    /* max-width: 600px;      Совпадает с .outer-container */
+    margin: 0 auto;        /* Центрируем по горизонтали */
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;           /* Расстояние между иконкой и текстом */
+    }
+
+    .header-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: #4f46e5;         /* Фиолетовый цвет иконки, можно поменять */
+    }
+    .header-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c2c2c;
+        font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+          <span class="header-icon">
+            <!-- Вставьте сюда SVG или <img> с вашей иконкой -->
+            <!-- Ниже пример иконки (документ), можно заменить на свою -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 2H14C13.45 2 13 .55 13 0H5C3.9 0 3 .9 3 2v20c0 1.1.9 2 2 2h14c1.1 
+                       0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c0 .55.45 1 1 1h5v4h-6V2zM5 22V2h6v5h7v15H5z"/>
+            </svg>
+          </span>
+          <span class="header-title">Sentilex: Анализ тональности</span>
+        </div>
+      </header>  
+  <div class="outer-container">
+    <!-- Заголовок и подпись вне белого блока -->
+    <div class="header-text">
+      <h1>Sentilex: Результаты анализа</h1>
+      <p>Подробные результаты эмоциональной окраски текста</p>
+    </div>
+    <!-- Белый блок (карточка) -->
+    <div class="card">
+      <h2>Анализ завершён!</h2>
+      <p>Результаты доступны для скачивания:</p>
+      <ul>
+        <li>
+          <a class="results-link" href="{{ url_for('download_file', filename=filename+'_results.txt') }}">
+            Скачать результаты анализа (TXT)
+          </a>
+        </li>
+        <li>
+          <a class="results-link" href="{{ url_for('download_file', filename=filename+'_sentiment_curve.png') }}">
+            Скачать график (PNG)
+          </a>
+        </li>
+      </ul>
+      <h3>График тональности</h3>
+      <img src="{{ url_for('download_file', filename=filename+'_sentiment_curve.png') }}" alt="Sentiment Curve">
+      <a class="nav-btn" href="{{ url_for('upload_file') }}">Загрузить новый файл</a>
+    </div>
+  </div>
+  <footer>
+    <span class="footer-text">
+        <p>&copy; 2025 Sentilex Project</p>
+    </span>
+  </footer>
+</body>
+</html>

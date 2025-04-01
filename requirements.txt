@@ -1,0 +1,9 @@
+numpy
+natasha
+matplotlib
+scipy
+pymorphy2
+Flask
+Werkzeug
+nltk
+pandas
