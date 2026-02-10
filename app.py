@@ -23,6 +23,8 @@ ALLOWED_EXTENSIONS = {"txt"}
 DEFAULT_CHUNK_SIZE = 50
 MIN_CHUNK_SIZE = 10
 MAX_CHUNK_SIZE = 500
+POSITIVE_THRESHOLD = 0.1
+NEGATIVE_THRESHOLD = -0.1
 
 # Глобальные переменные RuSentilex
 lexicon = None
@@ -53,8 +55,8 @@ def calculate_sentiment_distribution(sentiments):
     if total == 0:
         return {"positive_pct": 0, "negative_pct": 0, "neutral_pct": 0}
 
-    positive_count = sum(1 for score in sentiments if score > 0)
-    negative_count = sum(1 for score in sentiments if score < 0)
+    positive_count = sum(1 for score in sentiments if score > POSITIVE_THRESHOLD)
+    negative_count = sum(1 for score in sentiments if score < NEGATIVE_THRESHOLD)
     neutral_count = total - positive_count - negative_count
 
     positive_pct = round((positive_count / total) * 100)
