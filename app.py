@@ -2,7 +2,7 @@ import os
 import sys
 import time
 
-from flask import flash, redirect, render_template, request, send_from_directory, url_for, Flask
+from flask import Flask, flash, redirect, render_template, request, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "scripts"))
@@ -27,6 +27,7 @@ MAX_CHUNK_SIZE = 500
 # Глобальные переменные RuSentilex
 lexicon = None
 phrase_lexicon = None
+LAST_RESULT = None
 
 
 def allowed_file(filename):
@@ -47,8 +48,39 @@ def initialize_rusentilex():
 initialize_rusentilex()
 
 
+def calculate_sentiment_distribution(sentiments):
+    total = len(sentiments)
+    if total == 0:
+        return {"positive_pct": 0, "negative_pct": 0, "neutral_pct": 0}
+
+    positive_count = sum(1 for score in sentiments if score > 0)
+    negative_count = sum(1 for score in sentiments if score < 0)
+    neutral_count = total - positive_count - negative_count
+
+    positive_pct = round((positive_count / total) * 100)
+    negative_pct = round((negative_count / total) * 100)
+    neutral_pct = max(0, 100 - positive_pct - negative_pct)
+
+    return {
+        "positive_pct": positive_pct,
+        "negative_pct": negative_pct,
+        "neutral_pct": neutral_pct,
+    }
+
+
+def render_dashboard(default_chunk_size=DEFAULT_CHUNK_SIZE, result=None):
+    return render_template(
+        "results.html",
+        default_chunk_size=default_chunk_size,
+        has_result=bool(result),
+        result=result,
+    )
+
+
 @app.route("/", methods=["GET", "POST"])
 def upload_file():
+    global LAST_RESULT
+
     if request.method == "POST":
         file = request.files.get("file")
         chunk_size_raw = (request.form.get("chunk_size", str(DEFAULT_CHUNK_SIZE)) or "").strip()
@@ -91,6 +123,18 @@ def upload_file():
             flash("Не удалось выполнить анализ. Попробуйте другой файл.", "danger")
             return redirect(url_for("upload_file"))
 
+        LAST_RESULT = {
+            "filename": filename,
+            "chunk_size": chunk_size,
+            "sentence_count": metrics["sentence_count"],
+            "processing_time": f"{elapsed:.2f} с",
+            "result_filename": metrics["results_filename"],
+            "plot_filename": metrics["plot_filename"],
+            "positive_pct": metrics["positive_pct"],
+            "negative_pct": metrics["negative_pct"],
+            "neutral_pct": metrics["neutral_pct"],
+        }
+
         return redirect(
             url_for(
                 "results",
@@ -98,10 +142,14 @@ def upload_file():
                 chunk_size=chunk_size,
                 sentence_count=metrics["sentence_count"],
                 processing_time=f"{elapsed:.2f}",
+                positive_pct=metrics["positive_pct"],
+                negative_pct=metrics["negative_pct"],
+                neutral_pct=metrics["neutral_pct"],
             )
         )
 
-    return render_template("upload.html", default_chunk_size=DEFAULT_CHUNK_SIZE)
+    default_chunk_size = LAST_RESULT["chunk_size"] if LAST_RESULT else DEFAULT_CHUNK_SIZE
+    return render_dashboard(default_chunk_size=default_chunk_size, result=LAST_RESULT)
 
 
 def process_text(file_path, filename, chunk_size):
@@ -156,29 +204,56 @@ def process_text(file_path, filename, chunk_size):
         plot_path,
     )
 
+    distribution = calculate_sentiment_distribution(sentiments)
+
     return {
         "sentence_count": len(sentences),
         "results_filename": results_filename,
         "plot_filename": plot_filename,
+        **distribution,
     }
 
 
 @app.route("/results/<filename>")
 def results(filename):
+    global LAST_RESULT
+
     chunk_size = request.args.get("chunk_size", type=int)
     sentence_count = request.args.get("sentence_count", type=int)
     processing_time = request.args.get("processing_time", type=float)
-    processing_time_display = f"{processing_time:.2f} с" if processing_time is not None else "—"
+    positive_pct = request.args.get("positive_pct", type=int)
+    negative_pct = request.args.get("negative_pct", type=int)
+    neutral_pct = request.args.get("neutral_pct", type=int)
 
-    return render_template(
-        "results.html",
-        filename=filename,
-        chunk_size=chunk_size if chunk_size is not None else "—",
-        sentence_count=sentence_count if sentence_count is not None else "—",
-        processing_time=processing_time_display,
-        result_filename=f"{filename}_results.txt",
-        plot_filename=f"{filename}_sentiment_curve.png",
+    result = None
+    if LAST_RESULT and LAST_RESULT.get("filename") == filename:
+        result = LAST_RESULT
+    else:
+        result_filename = f"{filename}_results.txt"
+        plot_filename = f"{filename}_sentiment_curve.png"
+        result_exists = os.path.exists(os.path.join(app.config["RESULT_FOLDER"], result_filename))
+        plot_exists = os.path.exists(os.path.join(app.config["RESULT_FOLDER"], plot_filename))
+
+        if result_exists and plot_exists:
+            result = {
+                "filename": filename,
+                "chunk_size": chunk_size if chunk_size is not None else "—",
+                "sentence_count": sentence_count if sentence_count is not None else "—",
+                "processing_time": f"{processing_time:.2f} с" if processing_time is not None else "—",
+                "result_filename": result_filename,
+                "plot_filename": plot_filename,
+                "positive_pct": positive_pct if positive_pct is not None else 0,
+                "negative_pct": negative_pct if negative_pct is not None else 0,
+                "neutral_pct": neutral_pct if neutral_pct is not None else 0,
+            }
+            LAST_RESULT = result
+
+    default_chunk_size = (
+        result["chunk_size"]
+        if result and isinstance(result.get("chunk_size"), int)
+        else DEFAULT_CHUNK_SIZE
     )
+    return render_dashboard(default_chunk_size=default_chunk_size, result=result)
 
 
 @app.route("/result-file/<path:filename>")

@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitButton = form.querySelector("[data-submit-btn]");
   const submitSpinner = form.querySelector("[data-submit-spinner]");
   const submitLabel = form.querySelector("[data-submit-label]");
+  const chunkRange = form.querySelector("[data-chunk-range]");
+  const chunkInput = form.querySelector("[data-chunk-input]");
 
   const updateFileName = (file) => {
     fileName.textContent = file ? file.name : "Файл не выбран";
@@ -53,6 +55,32 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   dropzone.addEventListener("click", () => fileInput.click());
+
+  const clampChunkValue = (value) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      return Number(chunkInput.min || 10);
+    }
+    const min = Number(chunkInput.min || 10);
+    const max = Number(chunkInput.max || 500);
+    return Math.max(min, Math.min(max, parsed));
+  };
+
+  if (chunkRange && chunkInput) {
+    chunkRange.addEventListener("input", () => {
+      chunkInput.value = chunkRange.value;
+    });
+
+    chunkInput.addEventListener("input", () => {
+      chunkRange.value = clampChunkValue(chunkInput.value);
+    });
+
+    chunkInput.addEventListener("blur", () => {
+      const normalized = clampChunkValue(chunkInput.value);
+      chunkInput.value = normalized;
+      chunkRange.value = normalized;
+    });
+  }
 
   form.addEventListener("submit", () => {
     submitButton.disabled = true;

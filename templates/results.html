@@ -1,59 +1,154 @@
 {% extends "base.html" %}
 
-{% block title %}Sentilex | Результаты{% endblock %}
+{% block title %}Sentilex | Desktop Layout{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-xl-10">
-    <section class="hero-block mb-4 mb-md-5 text-center text-md-start">
-      <span class="badge text-bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2 mb-3">Анализ завершен</span>
-      <h1 class="hero-title hero-title-sm mb-2">Результаты Sentilex</h1>
-      <p class="hero-subtitle mb-0">Скачайте отчеты или загрузите следующий файл для новой итерации анализа.</p>
-    </section>
+<section class="hero-block text-center mb-4 mb-lg-5">
+  <h1 class="hero-title mb-2">Интеллектуальный анализ текста</h1>
+  <p class="hero-subtitle mb-0">Загрузите .txt документ, настройте размер фрагмента и получите разметку + график.</p>
+</section>
 
-    <div class="row g-3 g-md-4 mb-4">
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="metric-card">
-          <p class="metric-label mb-1">Имя файла</p>
-          <p class="metric-value mb-0" title="{{ filename }}">{{ filename }}</p>
-        </div>
-      </div>
-      <div class="col-6 col-md-3 col-xl-3">
-        <div class="metric-card">
-          <p class="metric-label mb-1">chunk_size</p>
-          <p class="metric-value mb-0">{{ chunk_size }}</p>
-        </div>
-      </div>
-      <div class="col-6 col-md-3 col-xl-3">
-        <div class="metric-card">
-          <p class="metric-label mb-1">Предложений</p>
-          <p class="metric-value mb-0">{{ sentence_count }}</p>
-        </div>
-      </div>
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="metric-card">
-          <p class="metric-label mb-1">Время обработки</p>
-          <p class="metric-value mb-0">{{ processing_time }}</p>
-        </div>
-      </div>
-    </div>
+<div class="row g-4 desktop-layout">
+  <div class="col-12 col-lg-6">
+    <article class="card border-0 app-card glass-panel left-panel h-100">
+      <div class="card-body p-4 p-xl-4">
+        <h2 class="panel-title mb-2">Загрузка и параметры анализа</h2>
+        <p class="panel-subtitle mb-4">Файл анализируется на сервере, после чего результат появляется в правой панели.</p>
 
-    <div class="card border-0 app-card glass-panel mb-4">
-      <div class="card-body p-3 p-md-4">
-        <h2 class="panel-title mb-3">График тональности</h2>
-        <img
-          src="{{ url_for('view_result_file', filename=plot_filename) }}"
-          alt="Sentiment curve"
-          class="img-fluid plot-preview"
-        >
-      </div>
-    </div>
+        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" data-upload-form>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">TXT-файл</label>
+            <div class="dropzone" data-dropzone>
+              <input
+                id="fileInput"
+                class="visually-hidden"
+                type="file"
+                name="file"
+                accept=".txt"
+                required
+                data-file-input
+              >
+              <p class="fw-semibold mb-1">Перетащите файл сюда</p>
+              <p class="text-secondary small mb-3">или выберите файл через диалог</p>
+              <button type="button" class="btn btn-outline-primary btn-sm px-4 rounded-pill" data-pick-file>
+                Выбрать файл
+              </button>
+              <p class="small text-muted mt-3 mb-0" data-file-name>Файл не выбран</p>
+            </div>
+          </div>
 
-    <div class="d-grid d-md-flex gap-2 gap-md-3">
-      <a class="btn btn-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=result_filename) }}">Скачать TXT</a>
-      <a class="btn btn-outline-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=plot_filename) }}">Скачать PNG</a>
-      <a class="btn btn-light border px-4 rounded-pill" href="{{ url_for('upload_file') }}">Загрузить новый файл</a>
-    </div>
+          <div class="mb-4">
+            <label for="chunkSizeInput" class="form-label fw-semibold">Размер фрагмента</label>
+            <div class="chunk-control glass-inline p-3">
+              <input
+                type="range"
+                class="form-range mb-2"
+                id="chunkSizeRange"
+                min="10"
+                max="500"
+                step="1"
+                value="{{ default_chunk_size }}"
+                data-chunk-range
+              >
+              <div class="d-flex align-items-center gap-3">
+                <span class="chunk-bound">10</span>
+                <input
+                  type="number"
+                  class="form-control text-center"
+                  id="chunkSizeInput"
+                  name="chunk_size"
+                  min="10"
+                  max="500"
+                  step="1"
+                  value="{{ default_chunk_size }}"
+                  required
+                  data-chunk-input
+                >
+                <span class="chunk-bound">500</span>
+              </div>
+            </div>
+            <div class="form-text mt-2">меньше — более детально, больше — более сглаженно</div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2 rounded-pill" data-submit-btn>
+              <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" data-submit-spinner></span>
+              <span data-submit-label>Анализировать</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </article>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <article class="card border-0 app-card glass-panel right-panel h-100">
+      <div class="card-body p-4 p-xl-4">
+        <h2 class="panel-title mb-3">Результаты</h2>
+
+        {% if has_result and result %}
+          <div class="metrics-inline mb-3">
+            <span><strong>Файл:</strong> {{ result.filename }}</span>
+            <span><strong>chunk_size:</strong> {{ result.chunk_size }}</span>
+            <span><strong>Предложений:</strong> {{ result.sentence_count }}</span>
+            <span><strong>Время:</strong> {{ result.processing_time }}</span>
+          </div>
+
+          <div class="sentiment-group mb-4">
+            <div class="sentiment-row">
+              <span>Позитивная</span>
+              <strong>{{ result.positive_pct }}%</strong>
+            </div>
+            <div class="progress sentiment-progress">
+              <div class="progress-bar progress-positive" style="width: {{ result.positive_pct }}%" role="progressbar"></div>
+            </div>
+          </div>
+
+          <div class="sentiment-group mb-4">
+            <div class="sentiment-row">
+              <span>Негативная</span>
+              <strong>{{ result.negative_pct }}%</strong>
+            </div>
+            <div class="progress sentiment-progress">
+              <div class="progress-bar progress-negative" style="width: {{ result.negative_pct }}%" role="progressbar"></div>
+            </div>
+          </div>
+
+          <div class="sentiment-group mb-4">
+            <div class="sentiment-row">
+              <span>Нейтральная</span>
+              <strong>{{ result.neutral_pct }}%</strong>
+            </div>
+            <div class="progress sentiment-progress">
+              <div class="progress-bar progress-neutral" style="width: {{ result.neutral_pct }}%" role="progressbar"></div>
+            </div>
+          </div>
+
+          <div class="chart-wrapper mb-4">
+            <img
+              src="{{ url_for('view_result_file', filename=result.plot_filename) }}"
+              alt="Sentiment curve"
+              class="img-fluid plot-preview"
+            >
+          </div>
+
+          <div class="d-grid d-md-flex gap-2">
+            <a class="btn btn-outline-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=result.result_filename) }}">
+              Сохранить результаты (TXT)
+            </a>
+            <a class="btn btn-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=result.plot_filename) }}">
+              Сохранить график (PNG)
+            </a>
+          </div>
+        {% else %}
+          <div class="result-placeholder">
+            <div class="placeholder-icon" aria-hidden="true">✦</div>
+            <h3 class="placeholder-title">Результаты появятся после анализа</h3>
+            <p class="placeholder-text mb-0">Заполните параметры слева и нажмите «Анализировать».</p>
+          </div>
+        {% endif %}
+      </div>
+    </article>
   </div>
 </div>
 {% endblock %}
