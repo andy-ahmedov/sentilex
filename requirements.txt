@@ -7,3 +7,4 @@ Flask
 Werkzeug
 nltk
 pandas
+pywebview
