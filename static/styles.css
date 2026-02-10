@@ -1,0 +1,126 @@
+:root {
+  --bg-a: #f3f7ff;
+  --bg-b: #eef7f6;
+  --brand: #0f766e;
+  --brand-2: #0284c7;
+  --text-main: #132233;
+  --text-muted: #5b6775;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  color: var(--text-main);
+  background: linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 100%);
+  min-height: 100vh;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 999px;
+  z-index: -1;
+  filter: blur(10px);
+}
+
+body::before {
+  width: 300px;
+  height: 300px;
+  top: -120px;
+  left: -100px;
+  background: rgba(14, 165, 233, 0.2);
+}
+
+body::after {
+  width: 280px;
+  height: 280px;
+  right: -80px;
+  bottom: -120px;
+  background: rgba(15, 118, 110, 0.2);
+}
+
+.site-header {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0b1b2b;
+}
+
+.app-card {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.dropzone {
+  border: 2px dashed #9eb5c6;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  background: #f8fbff;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dropzone:hover,
+.dropzone.is-dragover {
+  border-color: var(--brand);
+  background: #edfbf9;
+  box-shadow: 0 12px 30px rgba(15, 118, 110, 0.12);
+}
+
+.btn-primary {
+  border: 0;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0e6660, #036ea8);
+}
+
+.form-control:focus,
+.btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.18);
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(12, 34, 51, 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+  height: 100%;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.metric-value {
+  font-size: 1.02rem;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.plot-preview {
+  width: 100%;
+  border: 1px solid rgba(12, 34, 51, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(12, 34, 51, 0.12);
+  background: #fff;
+}
+
+@media (max-width: 575.98px) {
+  .dropzone {
+    padding: 1.5rem 1rem;
+  }
+}
