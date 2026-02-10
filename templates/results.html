@@ -86,7 +86,17 @@
       <div class="card-body p-4 p-xl-4">
         <h2 class="panel-title mb-3">Результаты</h2>
 
-        {% if has_result and result %}
+        {% if missing_result %}
+          <div class="result-placeholder missing-result">
+            <div class="placeholder-icon" aria-hidden="true">⚠</div>
+            <h3 class="placeholder-title">Результаты не найдены</h3>
+            <p class="placeholder-text mb-3">
+              Для файла <strong>{{ missing_filename }}</strong> нет доступных артефактов.
+              Возможно, ссылка устарела или результаты были удалены.
+            </p>
+            <a class="btn btn-primary rounded-pill px-4" href="{{ url_for('upload_file') }}">Назад</a>
+          </div>
+        {% elif has_result and result %}
           <div class="metrics-inline mb-3">
             <span><strong>Файл:</strong> {{ result.filename }}</span>
             <span><strong>chunk_size:</strong> {{ result.chunk_size }}</span>
@@ -126,7 +136,7 @@
 
           <div class="chart-wrapper mb-4">
             <img
-              src="{{ url_for('view_result_file', filename=result.plot_filename) }}"
+              src="{{ url_for('view_file', filename=result.plot_filename, v=cache_bust) }}"
               alt="Sentiment curve"
               class="img-fluid plot-preview"
             >

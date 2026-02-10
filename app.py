@@ -74,7 +74,22 @@ def render_dashboard(default_chunk_size=DEFAULT_CHUNK_SIZE, result=None):
         default_chunk_size=default_chunk_size,
         has_result=bool(result),
         result=result,
+        missing_result=False,
+        missing_filename=None,
+        cache_bust=int(time.time()),
     )
+
+
+def result_files_exist(result):
+    if not result:
+        return False
+    result_filename = result.get("result_filename")
+    plot_filename = result.get("plot_filename")
+    if not result_filename or not plot_filename:
+        return False
+    result_path = os.path.join(app.config["RESULT_FOLDER"], result_filename)
+    plot_path = os.path.join(app.config["RESULT_FOLDER"], plot_filename)
+    return os.path.exists(result_path) and os.path.exists(plot_path)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -226,7 +241,9 @@ def results(filename):
     neutral_pct = request.args.get("neutral_pct", type=int)
 
     result = None
-    if LAST_RESULT and LAST_RESULT.get("filename") == filename:
+    missing_result = False
+
+    if LAST_RESULT and LAST_RESULT.get("filename") == filename and result_files_exist(LAST_RESULT):
         result = LAST_RESULT
     else:
         result_filename = f"{filename}_results.txt"
@@ -247,17 +264,29 @@ def results(filename):
                 "neutral_pct": neutral_pct if neutral_pct is not None else 0,
             }
             LAST_RESULT = result
+        else:
+            if LAST_RESULT and LAST_RESULT.get("filename") == filename:
+                LAST_RESULT = None
+            missing_result = True
 
     default_chunk_size = (
         result["chunk_size"]
         if result and isinstance(result.get("chunk_size"), int)
         else DEFAULT_CHUNK_SIZE
     )
-    return render_dashboard(default_chunk_size=default_chunk_size, result=result)
+    return render_template(
+        "results.html",
+        default_chunk_size=default_chunk_size,
+        has_result=bool(result),
+        result=result,
+        missing_result=missing_result,
+        missing_filename=filename if missing_result else None,
+        cache_bust=int(time.time()),
+    )
 
 
-@app.route("/result-file/<path:filename>")
-def view_result_file(filename):
+@app.route("/view/<path:filename>")
+def view_file(filename):
     return send_from_directory(app.config["RESULT_FOLDER"], filename, as_attachment=False)
 
 

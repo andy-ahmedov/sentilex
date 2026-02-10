@@ -282,6 +282,12 @@ main.container {
   font-size: 0.98rem;
 }
 
+.result-placeholder.missing-result {
+  border-style: solid;
+  border-color: rgba(255, 167, 189, 0.45);
+  background: linear-gradient(160deg, rgba(120, 48, 92, 0.3), rgba(79, 34, 90, 0.36));
+}
+
 .dropzone {
   border: 1px dashed rgba(170, 190, 255, 0.58);
   border-radius: 14px;
