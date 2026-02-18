@@ -3,21 +3,40 @@
 {% block title %}Sentilex | Desktop Layout{% endblock %}
 
 {% block content %}
-<section class="hero-block text-center mb-4 mb-lg-5">
-  <h1 class="hero-title mb-2">Интеллектуальный анализ текста</h1>
-  <p class="hero-subtitle mb-0">Загрузите .txt документ, настройте размер фрагмента и получите разметку + график.</p>
+<section class="workspace-intro mb-4 mb-xl-5">
+  <div class="row g-4 align-items-end">
+    <div class="col-12 col-xl-8">
+      <p class="hero-kicker mb-2">DESKTOP EDITION</p>
+      <h1 class="hero-title mb-3">Лаборатория анализа тональности текста</h1>
+      <p class="hero-subtitle mb-0">
+        Загружайте TXT-файл, управляйте размером фрагмента и получайте визуальный профиль тональности в рабочем окне.
+      </p>
+    </div>
+    <div class="col-12 col-xl-4">
+      <div class="intro-chip-grid">
+        <div class="intro-chip">
+          <span class="chip-label">Режим</span>
+          <strong class="chip-value">Desktop</strong>
+        </div>
+        <div class="intro-chip">
+          <span class="chip-label">Последний файл</span>
+          <strong class="chip-value">{{ result.filename if has_result and result else "нет" }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <div class="row g-4 desktop-layout">
-  <div class="col-12 col-lg-6">
-    <article class="card border-0 app-card glass-panel left-panel h-100">
+  <div class="col-12 col-xl-5">
+    <article class="card border-0 app-card left-panel h-100">
       <div class="card-body p-4 p-xl-4">
-        <h2 class="panel-title mb-2">Загрузка и параметры анализа</h2>
-        <p class="panel-subtitle mb-4">Файл анализируется на сервере, после чего результат появляется в правой панели.</p>
+        <h2 class="panel-title mb-2">Панель запуска анализа</h2>
+        <p class="panel-subtitle mb-4">Настройте входные параметры и отправьте файл в обработку.</p>
 
         <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" data-upload-form>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">TXT-файл</label>
+          <div class="section-card mb-4">
+            <label class="form-label fw-semibold mb-2">TXT-файл</label>
             <div class="dropzone" data-dropzone>
               <input
                 id="fileInput"
@@ -28,8 +47,8 @@
                 required
                 data-file-input
               >
-              <p class="fw-semibold mb-1">Перетащите файл сюда</p>
-              <p class="text-secondary small mb-3">или выберите файл через диалог</p>
+              <p class="fw-semibold mb-1">Перетащите файл в рабочую зону</p>
+              <p class="text-secondary small mb-3">или выберите его вручную</p>
               <button type="button" class="btn btn-outline-primary btn-sm px-4 rounded-pill" data-pick-file>
                 Выбрать файл
               </button>
@@ -37,12 +56,12 @@
             </div>
           </div>
 
-          <div class="mb-4">
+          <div class="section-card mb-4">
             <label for="chunkSizeInput" class="form-label fw-semibold">Размер фрагмента</label>
-            <div class="chunk-control glass-inline p-3">
+            <div class="chunk-control p-3">
               <input
                 type="range"
-                class="form-range mb-2"
+                class="form-range mb-3"
                 id="chunkSizeRange"
                 min="10"
                 max="500"
@@ -67,70 +86,81 @@
                 <span class="chunk-bound">500</span>
               </div>
             </div>
-            <div class="form-text mt-2">меньше — более детально, больше — более сглаженно</div>
+            <div class="form-text mt-2">Чем меньше значение, тем детальнее траектория тональности.</div>
           </div>
 
-          <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2 rounded-pill" data-submit-btn>
-              <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" data-submit-spinner></span>
-              <span data-submit-label>Анализировать</span>
-            </button>
-          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 rounded-pill" data-submit-btn>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" data-submit-spinner></span>
+            <span data-submit-label>Запустить анализ</span>
+          </button>
         </form>
       </div>
     </article>
   </div>
 
-  <div class="col-12 col-lg-6">
-    <article class="card border-0 app-card glass-panel right-panel h-100">
+  <div class="col-12 col-xl-7">
+    <article class="card border-0 app-card right-panel h-100">
       <div class="card-body p-4 p-xl-4">
-        <h2 class="panel-title mb-3">Результаты</h2>
+        <h2 class="panel-title mb-3">Рабочий вывод</h2>
 
         {% if missing_result %}
           <div class="result-placeholder missing-result">
-            <div class="placeholder-icon" aria-hidden="true">⚠</div>
+            <div class="placeholder-icon" aria-hidden="true">!</div>
             <h3 class="placeholder-title">Результаты не найдены</h3>
             <p class="placeholder-text mb-3">
-              Для файла <strong>{{ missing_filename }}</strong> нет доступных артефактов.
-              Возможно, ссылка устарела или результаты были удалены.
+              Для файла <strong>{{ missing_filename }}</strong> артефакты отсутствуют.
             </p>
-            <a class="btn btn-primary rounded-pill px-4" href="{{ url_for('upload_file') }}">Назад</a>
+            <a class="btn btn-primary rounded-pill px-4" href="{{ url_for('upload_file') }}">Вернуться</a>
           </div>
         {% elif has_result and result %}
-          <div class="metrics-inline mb-3">
-            <span><strong>Файл:</strong> {{ result.filename }}</span>
-            <span><strong>chunk_size:</strong> {{ result.chunk_size }}</span>
-            <span><strong>Предложений:</strong> {{ result.sentence_count }}</span>
-            <span><strong>Время:</strong> {{ result.processing_time }}</span>
-          </div>
-
-          <div class="sentiment-group mb-4">
-            <div class="sentiment-row">
-              <span>Позитивная</span>
-              <strong>{{ result.positive_pct }}%</strong>
+          <div class="metrics-grid mb-4">
+            <div class="metric-card">
+              <p class="metric-label mb-1">Файл</p>
+              <p class="metric-value mb-0">{{ result.filename }}</p>
             </div>
-            <div class="progress sentiment-progress">
-              <div class="progress-bar progress-positive" style="width: {{ result.positive_pct }}%" role="progressbar"></div>
+            <div class="metric-card">
+              <p class="metric-label mb-1">Фрагмент</p>
+              <p class="metric-value mb-0">{{ result.chunk_size }}</p>
             </div>
-          </div>
-
-          <div class="sentiment-group mb-4">
-            <div class="sentiment-row">
-              <span>Негативная</span>
-              <strong>{{ result.negative_pct }}%</strong>
+            <div class="metric-card">
+              <p class="metric-label mb-1">Предложений</p>
+              <p class="metric-value mb-0">{{ result.sentence_count }}</p>
             </div>
-            <div class="progress sentiment-progress">
-              <div class="progress-bar progress-negative" style="width: {{ result.negative_pct }}%" role="progressbar"></div>
+            <div class="metric-card">
+              <p class="metric-label mb-1">Время</p>
+              <p class="metric-value mb-0">{{ result.processing_time }}</p>
             </div>
           </div>
 
-          <div class="sentiment-group mb-4">
-            <div class="sentiment-row">
-              <span>Нейтральная</span>
-              <strong>{{ result.neutral_pct }}%</strong>
+          <div class="sentiment-stack mb-4">
+            <div class="sentiment-group">
+              <div class="sentiment-row">
+                <span>Позитивная</span>
+                <strong>{{ result.positive_pct }}%</strong>
+              </div>
+              <div class="progress sentiment-progress">
+                <div class="progress-bar progress-positive" style="width: {{ result.positive_pct }}%" role="progressbar"></div>
+              </div>
             </div>
-            <div class="progress sentiment-progress">
-              <div class="progress-bar progress-neutral" style="width: {{ result.neutral_pct }}%" role="progressbar"></div>
+
+            <div class="sentiment-group">
+              <div class="sentiment-row">
+                <span>Негативная</span>
+                <strong>{{ result.negative_pct }}%</strong>
+              </div>
+              <div class="progress sentiment-progress">
+                <div class="progress-bar progress-negative" style="width: {{ result.negative_pct }}%" role="progressbar"></div>
+              </div>
+            </div>
+
+            <div class="sentiment-group mb-0">
+              <div class="sentiment-row">
+                <span>Нейтральная</span>
+                <strong>{{ result.neutral_pct }}%</strong>
+              </div>
+              <div class="progress sentiment-progress">
+                <div class="progress-bar progress-neutral" style="width: {{ result.neutral_pct }}%" role="progressbar"></div>
+              </div>
             </div>
           </div>
 
@@ -144,17 +174,17 @@
 
           <div class="d-grid d-md-flex gap-2">
             <a class="btn btn-outline-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=result.result_filename) }}">
-              Сохранить результаты (TXT)
+              Скачать TXT
             </a>
             <a class="btn btn-primary px-4 rounded-pill" href="{{ url_for('download_file', filename=result.plot_filename) }}">
-              Сохранить график (PNG)
+              Скачать PNG
             </a>
           </div>
         {% else %}
           <div class="result-placeholder">
-            <div class="placeholder-icon" aria-hidden="true">✦</div>
-            <h3 class="placeholder-title">Результаты появятся после анализа</h3>
-            <p class="placeholder-text mb-0">Заполните параметры слева и нажмите «Анализировать».</p>
+            <div class="placeholder-icon" aria-hidden="true">◎</div>
+            <h3 class="placeholder-title">Панель результатов готова</h3>
+            <p class="placeholder-text mb-0">Запустите анализ в левой колонке, и данные появятся здесь.</p>
           </div>
         {% endif %}
       </div>

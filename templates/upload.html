@@ -4,22 +4,23 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8 col-xl-7">
-    <section class="hero-block text-center mb-4 mb-md-5">
-      <h1 class="hero-title mb-3">Интеллектуальный анализ текста</h1>
+  <div class="col-12 col-xl-8">
+    <section class="workspace-intro text-center mb-4 mb-xl-5">
+      <p class="hero-kicker mb-2">DESKTOP EDITION</p>
+      <h1 class="hero-title mb-3">Лаборатория анализа тональности текста</h1>
       <p class="hero-subtitle mb-0">
-        Загрузите текст, настройте размер фрагмента и получите интерактивно оформленный результат за один запуск.
+        Загрузите исходный TXT-файл, задайте размер фрагмента и получите готовую визуализацию.
       </p>
     </section>
 
-    <div class="card border-0 app-card glass-panel">
+    <article class="card border-0 app-card">
       <div class="card-body p-4 p-md-5">
-        <h2 class="panel-title mb-2">Загрузка и параметры анализа</h2>
-        <p class="panel-subtitle mb-4">Загрузите .txt документ, настройте размер фрагмента и получите разметку + график.</p>
+        <h2 class="panel-title mb-2">Параметры запуска</h2>
+        <p class="panel-subtitle mb-4">После отправки файла вы перейдёте в рабочую панель результатов.</p>
 
         <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" data-upload-form>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Файл для анализа</label>
+          <div class="section-card mb-4">
+            <label class="form-label fw-semibold mb-2">Файл для анализа</label>
             <div class="dropzone" data-dropzone>
               <input
                 id="fileInput"
@@ -31,13 +32,13 @@
                 data-file-input
               >
               <p class="fw-semibold mb-1">Перетащите TXT-файл сюда</p>
-              <p class="text-secondary small mb-3">или выберите файл через стандартный диалог</p>
+              <p class="text-secondary small mb-3">или выберите через файловый диалог</p>
               <button type="button" class="btn btn-outline-primary btn-sm px-4 rounded-pill" data-pick-file>Выбрать файл</button>
               <p class="small text-muted mt-3 mb-0" data-file-name>Файл не выбран</p>
             </div>
           </div>
 
-          <div class="mb-4">
+          <div class="section-card mb-4">
             <label for="chunkSize" class="form-label fw-semibold">Размер фрагмента</label>
             <input
               type="number"
@@ -50,16 +51,16 @@
               value="{{ default_chunk_size }}"
               required
             >
-            <div class="form-text">меньше — более детально, больше — более сглаженно</div>
+            <div class="form-text">Чем меньше число, тем выше детализация графика.</div>
           </div>
 
           <button type="submit" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 rounded-pill" data-submit-btn>
             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" data-submit-spinner></span>
-            <span data-submit-label>Анализировать</span>
+            <span data-submit-label>Запустить анализ</span>
           </button>
         </form>
       </div>
-    </div>
+    </article>
   </div>
 </div>
 {% endblock %}
