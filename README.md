@@ -9,6 +9,19 @@ ProjectX/
 ├── Dockerfile
 ├── requirements.txt
 ├── app.py
+├── desktop/
+│   ├── design_variants/     # Qt Designer .ui эскизы (A/B/C)
+│   ├── ui/main.ui           # Основной desktop UI (web-parity upload)
+│   ├── style.qss            # QSS стили для desktop UI
+│   ├── main.py              # Desktop MVP entrypoint
+│   ├── requirements.txt     # Desktop-only зависимости (PySide6)
+│   ├── sentilex.spec        # PyInstaller spec для Windows сборки
+│   ├── render_main.py       # Рендер main.ui -> desktop_parity.png
+│   └── render_variants.py   # Рендер variant_*.ui + main.ui -> PNG
+├── tools/
+│   └── build_windows.ps1    # Сборка desktop .exe на Windows
+├── docs/
+│   └── design/              # PNG-превью desktop эскизов
 ├── scripts/
 │   ├── functions.py
 │   └── RuSentilex-2017.txt
@@ -35,8 +48,6 @@ ProjectX/
 
   * `/download/<filename>` для скачивания файлов,
 
-  * `/display/<filename>` (для inline-просмотра изображений),
-
   * а также вспомогательные функции.
 
 * `scripts/functions.py`
@@ -59,6 +70,95 @@ HTML-шаблоны, используемые Flask для рендеринга 
 
 ### Страница результатов
 ![Страница результатов](https://s.iimg.su/s/01/lwF7ZexFJpUMPIRc3mZN6SJZO3cWCGWSy4tppum1.png)
+
+## Desktop GUI дизайн-эскизы (PySide6, без изменения логики)
+
+Добавлены три варианта главного окна нативного GUI:
+- `desktop/design_variants/variant_A.ui` (minimalism modern)
+- `desktop/design_variants/variant_B.ui` (pro tool)
+- `desktop/design_variants/variant_C.ui` (friendly)
+
+Сгенерированные предпросмотры:
+- `docs/design/variant_A.png`
+- `docs/design/variant_B.png`
+- `docs/design/variant_C.png`
+
+Рендер PNG из `.ui`:
+```bash
+# если есть display
+.venv/bin/python desktop/render_variants.py
+
+# для WSL/headless
+QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/render_variants.py
+
+# альтернатива через virtual X server
+xvfb-run -a .venv/bin/python desktop/render_variants.py
+```
+
+Для рендера нужен PySide6 (отдельно от Flask-части):
+```bash
+.venv/bin/pip install -r desktop/requirements.txt
+```
+
+## Desktop GUI MVP (локальный запуск)
+
+Desktop-часть использует те же функции анализа, что и веб, но держит Qt-зависимости отдельно.
+
+Desktop UX (MVP):
+- после анализа текстовый результат показывается в preview-блоке;
+- preview графика кликабелен и открывается в большом модальном окне;
+- повторный анализ подряд поддерживается (результаты и preview обновляются).
+
+```bash
+# web/runtime зависимости
+.venv/bin/pip install -r requirements.txt
+
+# desktop-only зависимости (не для Docker/web)
+.venv/bin/pip install -r desktop/requirements.txt
+
+# запуск desktop приложения
+.venv/bin/python desktop/main.py
+
+# non-GUI smoke: двойной прогон анализа и проверка обновления TXT/PNG
+.venv/bin/python desktop/smoke_reanalysis.py
+```
+
+Рендер parity-экрана:
+```bash
+# если есть display
+.venv/bin/python desktop/render_main.py
+
+# для WSL/headless
+QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/render_main.py
+```
+
+## Windows build (.exe)
+
+Сборку `PyInstaller` нужно выполнять **на Windows** (кросс-компиляция из Linux/WSL не поддерживается).
+Для desktop сборки используйте Python `3.10` или `3.11` (из-за совместимости `pymorphy2`).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1
+```
+
+Опционально `onefile`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1 -OneFile
+```
+
+Примечание: `tools/build_windows.ps1` намеренно пинует `setuptools<81`, потому что `pkg_resources` удалён в новых версиях, а для текущего стека сборки/рантайма это нужно.
+
+Где искать результаты сборки:
+- `dist/Sentilex/` для `onedir` (по умолчанию)
+- `dist/Sentilex.exe` для `onefile`
+
+Важно: desktop приложение в режиме `.exe` пишет `results/` рядом с исполняемым файлом, поэтому каталог запуска должен быть доступен на запись.
+
+В bundle включаются обязательные desktop-ресурсы:
+- `desktop/ui/main.ui`
+- `desktop/style.qss`
+- `scripts/RuSentilex-2017.txt`
 
 ## Установка и запуск
 
