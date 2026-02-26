@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SentilexVariantBWindow</class>
+ <widget class="QMainWindow" name="SentilexVariantBWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Sentilex Desktop - Variant B (Pro Tool)</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow { background: #e9ecef; }
+QFrame#controlPanel, QFrame#workspacePanel { background: #ffffff; border: 1px solid #c8d0d8; border-radius: 8px; }
+QPushButton#analyzeButton { background: #0b4f6c; color: #ffffff; border-radius: 6px; padding: 10px 12px; font-weight: 600; }
+QPushButton#browseButton { background: #f1f5f8; border: 1px solid #c8d0d8; border-radius: 6px; }
+QLabel#errorBanner { background: #fee2e2; color: #9f1239; border: 1px solid #fecaca; border-radius: 6px; padding: 6px; }</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="mainSplitLayout">
+    <property name="leftMargin">
+     <number>20</number>
+    </property>
+    <property name="topMargin">
+     <number>20</number>
+    </property>
+    <property name="rightMargin">
+     <number>20</number>
+    </property>
+    <property name="bottomMargin">
+     <number>20</number>
+    </property>
+    <property name="spacing">
+     <number>16</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="controlPanel">
+      <property name="minimumSize">
+       <size>
+        <width>360</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>420</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="controlLayout">
+       <property name="leftMargin">
+        <number>16</number>
+       </property>
+       <property name="topMargin">
+        <number>16</number>
+       </property>
+       <property name="rightMargin">
+        <number>16</number>
+       </property>
+       <property name="bottomMargin">
+        <number>16</number>
+       </property>
+       <property name="spacing">
+        <number>12</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="appTitle">
+         <property name="text">
+          <string>Sentilex Pro Console</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-size: 22px; font-weight: 700; color: #102a43;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="appSubtitle">
+         <property name="text">
+          <string>Эскиз для рабочего режима с панелью контроля</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="controlsForm">
+         <property name="labelAlignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="fileLabel">
+           <property name="text">
+            <string>Файл</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <layout class="QHBoxLayout" name="fileInputRow">
+           <item>
+            <widget class="QLineEdit" name="filePathEdit">
+             <property name="placeholderText">
+              <string>Путь к .txt</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="browseButton">
+             <property name="text">
+              <string>Обзор...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="fragmentLabel">
+           <property name="text">
+            <string>Размер фрагмента</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSpinBox" name="fragmentSizeSpinBox">
+           <property name="minimum">
+            <number>10</number>
+           </property>
+           <property name="maximum">
+            <number>500</number>
+           </property>
+           <property name="value">
+            <number>50</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QPushButton" name="analyzeButton">
+         <property name="text">
+          <string>Запустить анализ</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="statusLabel">
+         <property name="text">
+          <string>Состояние: idle</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="analyzeProgress">
+         <property name="minimum">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <number>0</number>
+         </property>
+         <property name="value">
+          <number>-1</number>
+         </property>
+         <property name="visible">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="runLogView">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="plainText">
+          <string>[idle] Ожидается выбор файла
+[analyzing] Старт обработки...
+[done] Готово: 2 артефакта</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="workspacePanel">
+      <layout class="QVBoxLayout" name="workspaceLayout">
+       <property name="leftMargin">
+        <number>14</number>
+       </property>
+       <property name="topMargin">
+        <number>14</number>
+       </property>
+       <property name="rightMargin">
+        <number>14</number>
+       </property>
+       <property name="bottomMargin">
+        <number>14</number>
+       </property>
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QToolBar" name="resultToolbar">
+         <property name="movable">
+          <bool>false</bool>
+         </property>
+         <addaction name="exportTxtAction"/>
+         <addaction name="exportPngAction"/>
+         <addaction name="resetAction"/>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="errorBanner">
+         <property name="text">
+          <string>Ошибка: файл не выбран или формат не поддерживается</string>
+         </property>
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTabWidget" name="resultTabs">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="txtTab">
+          <attribute name="title">
+           <string>Результат TXT</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="txtTabLayout">
+           <item>
+            <widget class="QPlainTextEdit" name="resultTextPreview">
+             <property name="plainText">
+              <string>+0.31 Первая строка
+-0.11 Вторая строка</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="plotTab">
+          <attribute name="title">
+           <string>График</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="plotTabLayout">
+           <item>
+            <widget class="QLabel" name="plotPreview">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>420</height>
+              </size>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background: #f5f7fa; border: 1px dashed #94a3b8; border-radius: 8px;</string>
+             </property>
+             <property name="text">
+              <string>Preview графика тональности (PNG)</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <action name="exportTxtAction">
+   <property name="text">
+    <string>Экспорт TXT</string>
+   </property>
+  </action>
+  <action name="exportPngAction">
+   <property name="text">
+    <string>Экспорт PNG</string>
+   </property>
+  </action>
+  <action name="resetAction">
+   <property name="text">
+    <string>Сброс</string>
+   </property>
+  </action>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SentilexVariantCWindow</class>
+ <widget class="QMainWindow" name="SentilexVariantCWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Sentilex Desktop - Variant C (Friendly)</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow { background: qradialgradient(cx:0.2, cy:0.2, radius:1.0, fx:0.2, fy:0.2, stop:0 #fff8ef, stop:1 #ffe2c5); }
+QFrame#heroCard, QGroupBox { background: #ffffff; border: 1px solid #f2c89b; border-radius: 16px; }
+QPushButton#analyzeButton { background: #e07a2f; color: #ffffff; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; }
+QPushButton#browseButton, QPushButton#downloadTxtButton, QPushButton#downloadPngButton, QPushButton#newAnalysisButton { background: #fff3e6; border: 1px solid #efc59a; border-radius: 10px; padding: 8px 12px; }</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="rootLayout">
+    <property name="leftMargin">
+     <number>90</number>
+    </property>
+    <property name="topMargin">
+     <number>40</number>
+    </property>
+    <property name="rightMargin">
+     <number>90</number>
+    </property>
+    <property name="bottomMargin">
+     <number>30</number>
+    </property>
+    <property name="spacing">
+     <number>14</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="heroCard">
+      <layout class="QVBoxLayout" name="heroLayout">
+       <property name="leftMargin">
+        <number>24</number>
+       </property>
+       <property name="topMargin">
+        <number>22</number>
+       </property>
+       <property name="rightMargin">
+        <number>24</number>
+       </property>
+       <property name="bottomMargin">
+        <number>22</number>
+       </property>
+       <property name="spacing">
+        <number>12</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="titleLabel">
+         <property name="text">
+          <string>Sentilex: дружелюбный режим</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-size: 30px; font-weight: 700; color: #7a3410;</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignHCenter|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="helperLabel">
+         <property name="text">
+          <string>Шаг за шагом: выберите файл, задайте размер фрагмента и получите результат</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignHCenter|Qt::AlignVCenter</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="step1Group">
+         <property name="title">
+          <string>1. Файл</string>
+         </property>
+         <layout class="QHBoxLayout" name="step1Layout">
+          <item>
+           <widget class="QLineEdit" name="filePathEdit">
+            <property name="placeholderText">
+             <string>Выберите .txt</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="browseButton">
+            <property name="text">
+             <string>Выбрать .txt</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="step2Group">
+         <property name="title">
+          <string>2. Параметры</string>
+         </property>
+         <layout class="QHBoxLayout" name="step2Layout">
+          <item>
+           <widget class="QLabel" name="fragmentHintLabel">
+            <property name="text">
+             <string>Размер фрагмента (10-500):</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="fragmentSizeSpinBox">
+            <property name="minimum">
+             <number>10</number>
+            </property>
+            <property name="maximum">
+             <number>500</number>
+            </property>
+            <property name="value">
+             <number>50</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="step2Spacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="analyzeButton">
+         <property name="text">
+          <string>Начать анализ</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="step3Group">
+         <property name="title">
+          <string>3. Результат</string>
+         </property>
+         <layout class="QVBoxLayout" name="step3Layout">
+          <item>
+           <widget class="QLabel" name="statusLabel">
+            <property name="text">
+             <string>Состояние: idle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="analyzeProgress">
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>-1</number>
+            </property>
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="plotPreview">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>170</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: #fff7ed; border: 1px dashed #fb923c; border-radius: 10px;</string>
+            </property>
+            <property name="text">
+             <string>Мини-превью графика</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="resultButtons">
+            <item>
+             <widget class="QPushButton" name="downloadTxtButton">
+              <property name="text">
+               <string>Забрать TXT</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="downloadPngButton">
+              <property name="text">
+               <string>Забрать PNG</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="newAnalysisButton">
+              <property name="text">
+               <string>Анализировать другой файл</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QPlainTextEdit" name="resultTextPreview">
+            <property name="plainText">
+             <string>+0.55 Добрый пример
+-0.22 Нейтральный пример</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
