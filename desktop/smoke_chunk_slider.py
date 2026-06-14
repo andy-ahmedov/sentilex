@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from desktop.main import MainWindowController, load_window, resource_path  # noqa: E402
+from main import MainWindowController, load_window, resource_path  # noqa: E402
 
 
 def validate_case(
