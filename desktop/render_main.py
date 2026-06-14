@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render desktop main.ui parity preview into docs/design/desktop_parity.png."""
+"""Render desktop main.ui preview into docs/design/desktop_parity.png."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def main() -> int:
     app.setStyle("Fusion")
 
     window = load_main_window(MAIN_UI)
-    window.resize(1280, 820)
+    window.resize(1440, 900)
     window.setStyleSheet(MAIN_QSS.read_text(encoding="utf-8"))
     window.show()
     app.processEvents()

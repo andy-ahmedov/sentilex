@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1280</width>
-    <height>820</height>
+    <width>1380</width>
+    <height>860</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Sentilex Desktop</string>
+   <string>SentiSoft Desktop</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="rootLayout">
@@ -37,16 +37,16 @@
       </property>
       <layout class="QHBoxLayout" name="headerLayout">
        <property name="leftMargin">
-        <number>112</number>
+        <number>24</number>
        </property>
        <property name="topMargin">
-        <number>8</number>
+        <number>10</number>
        </property>
        <property name="rightMargin">
-        <number>112</number>
+        <number>24</number>
        </property>
        <property name="bottomMargin">
-        <number>8</number>
+        <number>10</number>
        </property>
        <property name="spacing">
         <number>12</number>
@@ -97,7 +97,7 @@
        <item>
         <widget class="QLabel" name="headerTitle">
          <property name="text">
-          <string>Sentilex: Анализ тональности</string>
+          <string>SentiSoft: Анализ тональности</string>
          </property>
         </widget>
        </item>
@@ -118,468 +118,494 @@
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="mainBody">
-      <layout class="QVBoxLayout" name="bodyLayout">
-       <property name="leftMargin">
-        <number>16</number>
-       </property>
-       <property name="topMargin">
-        <number>64</number>
-       </property>
-       <property name="rightMargin">
-        <number>16</number>
-       </property>
-       <property name="bottomMargin">
-        <number>20</number>
-       </property>
-       <property name="spacing">
-        <number>22</number>
-       </property>
-       <item>
-        <layout class="QHBoxLayout" name="heroRow">
-         <item>
-          <spacer name="heroLeftSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+     <widget class="QScrollArea" name="contentScrollArea">
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <layout class="QVBoxLayout" name="scrollContentLayout">
+        <property name="leftMargin">
+         <number>20</number>
+        </property>
+        <property name="topMargin">
+         <number>20</number>
+        </property>
+        <property name="rightMargin">
+         <number>20</number>
+        </property>
+        <property name="bottomMargin">
+         <number>20</number>
+        </property>
+        <property name="spacing">
+         <number>18</number>
+        </property>
+        <item>
+         <widget class="QFrame" name="pageIntro">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <layout class="QVBoxLayout" name="pageIntroLayout">
+           <property name="leftMargin">
+            <number>22</number>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
+           <property name="topMargin">
+            <number>18</number>
            </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QFrame" name="heroBlock">
-           <property name="maximumSize">
-            <size>
-             <width>900</width>
-             <height>16777215</height>
-            </size>
+           <property name="rightMargin">
+            <number>22</number>
            </property>
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
+           <property name="bottomMargin">
+            <number>18</number>
            </property>
-           <layout class="QVBoxLayout" name="heroLayout">
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="pageTitle">
-              <property name="text">
-               <string>Интеллектуальный анализ текста</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="pageSubtitle">
-              <property name="text">
-               <string>Загрузите текстовый файл и получите подробный анализ эмоциональной окраски содержимого</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <spacer name="heroRightSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+           <property name="spacing">
+            <number>6</number>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
+           <item>
+            <widget class="QLabel" name="pageTitle">
+             <property name="text">
+              <string>Интеллектуальный анализ текста</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="pageSubtitle">
+             <property name="text">
+              <string>Программа для анализа эмоциональной тональности текста с визуализацией результатов и метрик.</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="workspaceCard">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <layout class="QHBoxLayout" name="workspaceLayout">
+           <property name="leftMargin">
+            <number>0</number>
            </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-       <item>
-       <layout class="QHBoxLayout" name="cardRow">
-         <property name="stretch">
-          <string>1,8,1</string>
-         </property>
-         <item>
-          <spacer name="cardLeftSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+           <property name="topMargin">
+            <number>0</number>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
+           <property name="rightMargin">
+            <number>0</number>
            </property>
-          </spacer>
-         </item>
-         <item>
-         <widget class="QFrame" name="card">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+           <property name="bottomMargin">
+            <number>0</number>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>1040</width>
-             <height>16777215</height>
-            </size>
+           <property name="spacing">
+            <number>20</number>
            </property>
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <layout class="QVBoxLayout" name="cardLayout">
-            <property name="leftMargin">
-             <number>32</number>
-            </property>
-            <property name="topMargin">
-             <number>32</number>
-            </property>
-            <property name="rightMargin">
-             <number>32</number>
-            </property>
-            <property name="bottomMargin">
-             <number>32</number>
-            </property>
-            <property name="spacing">
-             <number>16</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="cardTitle">
-              <property name="text">
-               <string>Загрузка файла и параметры анализа</string>
+           <item>
+            <widget class="QFrame" name="controlPanel">
+             <property name="minimumSize">
+              <size>
+               <width>340</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>380</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <layout class="QVBoxLayout" name="controlPanelLayout">
+              <property name="leftMargin">
+               <number>24</number>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
+              <property name="topMargin">
+               <number>24</number>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="cardSubtitle">
-              <property name="text">
-               <string>Загрузите текстовый файл и настройте параметры для анализа тональности</string>
+              <property name="rightMargin">
+               <number>24</number>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
+              <property name="bottomMargin">
+               <number>24</number>
               </property>
-              <property name="wordWrap">
-               <bool>true</bool>
+              <property name="spacing">
+               <number>16</number>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QFrame" name="uploadBox">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>128</height>
-               </size>
-              </property>
-              <property name="frameShape">
-               <enum>QFrame::NoFrame</enum>
-              </property>
-              <layout class="QVBoxLayout" name="uploadBoxLayout">
-               <property name="leftMargin">
-                <number>20</number>
-               </property>
-               <property name="topMargin">
-                <number>16</number>
-               </property>
-               <property name="rightMargin">
-                <number>20</number>
-               </property>
-               <property name="bottomMargin">
-                <number>16</number>
-               </property>
-               <property name="spacing">
-                <number>8</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="uploadLabel">
-                 <property name="text">
-                  <string>Нажмите для выбора файла (.txt)</string>
+              <item>
+               <widget class="QLabel" name="cardTitle">
+                <property name="text">
+                 <string>Параметры анализа</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="cardSubtitle">
+                <property name="text">
+                 <string>Выберите файл, задайте размер фрагмента и запустите анализ. Результаты появятся в рабочей панели справа.</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QFrame" name="uploadBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>104</height>
+                 </size>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <layout class="QVBoxLayout" name="uploadBoxLayout">
+                 <property name="leftMargin">
+                  <number>18</number>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
+                 <property name="topMargin">
+                  <number>16</number>
                  </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="fileRow">
+                 <property name="rightMargin">
+                  <number>18</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>16</number>
+                 </property>
                  <property name="spacing">
-                  <number>8</number>
+                  <number>10</number>
                  </property>
                  <item>
-                  <widget class="QLineEdit" name="filePathEdit">
-                   <property name="readOnly">
+                  <widget class="QLabel" name="uploadLabel">
+                   <property name="text">
+                    <string>Нажмите для выбора файла (.txt)</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                   <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="placeholderText">
-                    <string>Путь к выбранному .txt файлу</string>
-                   </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="browseButton">
-                   <property name="text">
-                    <string>Выбрать файл</string>
+                  <layout class="QHBoxLayout" name="fileRow">
+                   <property name="spacing">
+                    <number>8</number>
                    </property>
-                  </widget>
+                   <item>
+                    <widget class="QLineEdit" name="filePathEdit">
+                     <property name="readOnly">
+                      <bool>true</bool>
+                     </property>
+                     <property name="placeholderText">
+                      <string>Путь к выбранному .txt файлу</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="browseButton">
+                     <property name="text">
+                      <string>Выбрать файл</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QFrame" name="sliderSection">
-              <property name="frameShape">
-               <enum>QFrame::NoFrame</enum>
-              </property>
-              <layout class="QVBoxLayout" name="sliderSectionLayout">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <property name="spacing">
-                <number>8</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="chunkSizeLabel">
-                 <property name="text">
-                  <string>Размер фрагмента</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="sliderRow">
-                 <property name="spacing">
-                  <number>12</number>
-                 </property>
-                 <item>
-                  <widget class="QLabel" name="chunkMinLabel">
-                   <property name="text">
-                    <string>10</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QSlider" name="chunkSizeSlider">
-                   <property name="minimum">
-                    <number>10</number>
-                   </property>
-                   <property name="maximum">
-                    <number>500</number>
-                   </property>
-                   <property name="value">
-                    <number>50</number>
-                   </property>
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="chunkMaxLabel">
-                   <property name="text">
-                    <string>500</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QLabel" name="chunkCurrentLabel">
-                 <property name="text">
-                  <string>Текущее значение: 50</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="submitButton">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>44</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Анализировать</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QFrame" name="statusFrame">
-              <property name="frameShape">
-               <enum>QFrame::NoFrame</enum>
-              </property>
-              <layout class="QVBoxLayout" name="statusFrameLayout">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <property name="spacing">
-                <number>6</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="statusLabel">
-                 <property name="text">
-                  <string>Состояние: idle</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QProgressBar" name="progressBar">
-                 <property name="visible">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimum">
+               </widget>
+              </item>
+              <item>
+               <widget class="QFrame" name="sliderSection">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <layout class="QVBoxLayout" name="sliderSectionLayout">
+                 <property name="leftMargin">
                   <number>0</number>
                  </property>
-                 <property name="maximum">
+                 <property name="topMargin">
                   <number>0</number>
                  </property>
-                 <property name="value">
-                  <number>-1</number>
+                 <property name="rightMargin">
+                  <number>0</number>
                  </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-            <widget class="QGroupBox" name="resultsGroup">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Результаты</string>
-              </property>
-              <layout class="QVBoxLayout" name="resultsLayout">
-               <property name="spacing">
-                <number>8</number>
-               </property>
-               <item>
-                <layout class="QHBoxLayout" name="resultsButtonsRow">
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <property name="spacing">
                   <number>8</number>
                  </property>
                  <item>
-                  <widget class="QPushButton" name="downloadTxtButton">
+                 <widget class="QLabel" name="chunkSizeLabel">
                    <property name="text">
-                    <string>Скачать TXT</string>
-                   </property>
-                   <property name="enabled">
-                    <bool>false</bool>
+                    <string>Размер фрагмента (в предложениях)</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="downloadPngButton">
-                   <property name="text">
-                    <string>Скачать PNG</string>
+                  <layout class="QHBoxLayout" name="sliderRow">
+                   <property name="spacing">
+                    <number>12</number>
                    </property>
-                   <property name="enabled">
-                    <bool>false</bool>
+                   <item>
+                    <widget class="QLabel" name="chunkMinLabel">
+                     <property name="text">
+                      <string>10</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QSlider" name="chunkSizeSlider">
+                     <property name="minimum">
+                      <number>10</number>
+                     </property>
+                     <property name="maximum">
+                      <number>500</number>
+                     </property>
+                     <property name="value">
+                      <number>50</number>
+                     </property>
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="chunkMaxLabel">
+                     <property name="text">
+                      <string>500</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                 <widget class="QLabel" name="chunkCurrentLabel">
+                   <property name="text">
+                    <string>Текущее значение: 50</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="openResultsFolderButton">
+                  <widget class="QLabel" name="chunkHintLabel">
                    <property name="text">
-                    <string>Открыть папку результатов</string>
+                    <string>Размер фрагмента задаётся по количеству предложений в тексте.</string>
                    </property>
-                   <property name="enabled">
-                    <bool>false</bool>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="sentenceCountLabel">
+                   <property name="text">
+                    <string>Количество предложений будет показано после выбора файла.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
                 </layout>
-               </item>
-               <item>
-                <widget class="QPlainTextEdit" name="resultTextPreview">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="submitButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>46</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Анализировать</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QFrame" name="statusFrame">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <layout class="QVBoxLayout" name="statusFrameLayout">
+                 <property name="leftMargin">
+                  <number>12</number>
                  </property>
+                 <property name="topMargin">
+                  <number>12</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>12</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>12</number>
+                 </property>
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="statusLabel">
+                   <property name="text">
+                    <string>Состояние: idle</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QProgressBar" name="progressBar">
+                   <property name="visible">
+                    <bool>false</bool>
+                   </property>
+                   <property name="minimum">
+                    <number>0</number>
+                   </property>
+                   <property name="maximum">
+                    <number>0</number>
+                   </property>
+                   <property name="value">
+                    <number>-1</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <spacer name="controlPanelStretch">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QFrame" name="resultsPanel">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <layout class="QVBoxLayout" name="resultsPanelLayout">
+              <property name="leftMargin">
+               <number>24</number>
+              </property>
+              <property name="topMargin">
+               <number>24</number>
+              </property>
+              <property name="rightMargin">
+               <number>24</number>
+              </property>
+              <property name="bottomMargin">
+               <number>24</number>
+              </property>
+              <property name="spacing">
+               <number>16</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="resultsTitle">
+                <property name="text">
+                 <string>Результаты анализа</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="resultsSubtitle">
+                <property name="text">
+                 <string>После анализа доступны текстовый результат, график и Python-код для внешней доработки визуализации.</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="resultsButtonsRow">
+                <property name="spacing">
+                 <number>8</number>
+                </property>
+                <item>
+                 <widget class="QPushButton" name="downloadTxtButton">
+                  <property name="text">
+                   <string>Скачать TXT</string>
+                  </property>
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="downloadPngButton">
+                  <property name="text">
+                   <string>Скачать PNG</string>
+                  </property>
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="downloadPyButton">
+                  <property name="text">
+                   <string>Скачать PY</string>
+                  </property>
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="openResultsFolderButton">
+                  <property name="text">
+                   <string>Открыть папку результатов</string>
+                  </property>
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="resultsButtonsSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QSplitter" name="resultsSplitter">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="handleWidth">
+                 <number>8</number>
+                </property>
+                <widget class="QLabel" name="plotPreview">
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
                    <height>140</height>
-                  </size>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                 <property name="plainText">
-                  <string>Результат появится после завершения анализа.</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="plotPreview">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>180</height>
                   </size>
                  </property>
                  <property name="alignment">
@@ -589,122 +615,30 @@
                   <string>Preview графика (PNG)</string>
                  </property>
                 </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <spacer name="cardRightSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <spacer name="bodyStretch">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="footerRow">
-         <item>
-          <spacer name="footerLeftSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QFrame" name="footerBlock">
-           <property name="maximumSize">
-            <size>
-             <width>900</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <layout class="QVBoxLayout" name="footerLayout">
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <property name="spacing">
-             <number>2</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="footerLine1">
-              <property name="text">
-               <string>© 2025 Sentilex Project</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="footerLine2">
-              <property name="text">
-               <string>Современный инструмент для анализа тональности текста</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <spacer name="footerRightSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-      </layout>
+                <widget class="QPlainTextEdit" name="resultTextPreview">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>120</height>
+                  </size>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="plainText">
+                  <string>Результат появится после завершения анализа.</string>
+                 </property>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>
