@@ -6,6 +6,7 @@ from flask import Flask, flash, redirect, render_template, request, send_from_di
 from werkzeug.utils import secure_filename
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "scripts"))
+import export_script
 import functions
 
 app = Flask(__name__)
@@ -20,6 +21,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["RESULT_FOLDER"] = RESULT_FOLDER
 
 ALLOWED_EXTENSIONS = {"txt"}
+LEXICON_PATH = "scripts/RuSentilex-2017.txt"
 DEFAULT_CHUNK_SIZE = 50
 MIN_CHUNK_SIZE = 10
 MAX_CHUNK_SIZE = 500
@@ -38,7 +40,7 @@ def allowed_file(filename):
 
 def initialize_rusentilex():
     global lexicon, phrase_lexicon
-    file_path = "scripts/RuSentilex-2017.txt"
+    file_path = LEXICON_PATH
 
     if os.path.exists(file_path):
         lexicon, phrase_lexicon = functions.load_rusentilex(file_path)
@@ -169,66 +171,60 @@ def upload_file():
     return render_dashboard(default_chunk_size=default_chunk_size, result=LAST_RESULT)
 
 
-def process_text(file_path, filename, chunk_size):
+def process_text(file_path, filename, chunk_size, export_script_file=False):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
 
     processed_text = functions.preprocess_text(text)
-    sentences = functions.split_into_sentences(processed_text)
+    sentences, sections = functions.extract_sentences_and_sections(processed_text)
+    functions.write_sections_file(sections)
+    section_labels = [label for label, _ in sections]
+    section_positions = [position for _, position in sections]
 
-    # Загружаем разделы из файла sections.txt
-    section_labels, section_positions = [], []
-    with open("sections.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                label, position = line.split(" ", 1)
-                label = label.strip("'")
-                section_labels.append(label)
-                section_positions.append(int(position))
-
-    sentiments1 = functions.calculate_sentences_sentiments(
+    sentiments = functions.calculate_sentences_sentiments(
         sentences,
-        section_positions,
+        [],
         chunk_size,
         lexicon,
         phrase_lexicon,
     )
-    sentiments2 = functions.calculate_sentences_sentiments(
-        sentences,
-        section_positions,
-        2 * chunk_size,
-        lexicon,
-        phrase_lexicon,
-    )
-
-    min_len = min(len(sentiments1), len(sentiments2), len(sentences))
-    sentiments = [(a + b) / 2 for a, b in zip(sentiments1[:min_len], sentiments2[:min_len])]
-    sentences = sentences[:min_len]
 
     results_filename = f"{filename}_results.txt"
     plot_filename = f"{filename}_sentiment_curve.png"
     results_path = os.path.join(app.config["RESULT_FOLDER"], results_filename)
     plot_path = os.path.join(app.config["RESULT_FOLDER"], plot_filename)
 
-    functions.save_results_to_text(sentences, sentiments, results_path)
-    functions.plot_sentiment_curve(
+    plot_metrics = functions.plot_sentiment_curve(
         sentiments,
         sentences,
         section_positions,
         section_labels,
-        2 * chunk_size,
+        chunk_size,
         plot_path,
     )
+    functions.save_results_to_text(sentences, sentiments, results_path, plot_metrics)
 
     distribution = calculate_sentiment_distribution(sentiments)
-
-    return {
+    artifacts = {
         "sentence_count": len(sentences),
         "results_filename": results_filename,
         "plot_filename": plot_filename,
+        "result_txt": results_path,
+        "result_png": plot_path,
         **distribution,
+        **plot_metrics,
     }
+
+    if export_script_file:
+        script_path = os.path.join(app.config["RESULT_FOLDER"], f"{filename}_analysis_code.py")
+        export_script.export_analysis_script(
+            script_path,
+            default_chunk_size=chunk_size,
+            lexicon_path=LEXICON_PATH,
+        )
+        artifacts["result_py"] = script_path
+
+    return artifacts
 
 
 @app.route("/results/<filename>")
@@ -299,4 +295,3 @@ def download_file(filename):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-    

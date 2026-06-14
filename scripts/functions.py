@@ -6,11 +6,16 @@ import re
 import pymorphy2
 from natasha import MorphVocab
 import numpy as np
-from scipy.signal import savgol_filter
 from scipy.ndimage import uniform_filter1d
 
 # Инициализация морфологического анализатора из Natasha
 morph_vocab = MorphVocab()
+
+METRIC_DISPLAY_NAMES = (
+    ("volatility_amplitude", "Волатильность"),
+    ("path_length", "Общая изменчивость"),
+    ("mean_change", "Удельная изменчивость"),
+)
 
 # Функция для загрузки RuSentiLex
 def load_rusentilex(file_path):
@@ -241,13 +246,13 @@ def preprocess_text(text):
 
     return '\n'.join(processed_lines)
 
-def split_into_sentences(text):
+def extract_sentences_and_sections(text):
     """
-    Разбивает текст на предложения, сохраняя разделы и их номера.
+    Разбивает текст на предложения и возвращает позиции разделов без записи на диск.
     Сохраняет все знаки пунктуации в предложениях.
     """
     sentences = []
-    sections = {}
+    sections = []
     sentence_counter = 1
 
     # Улучшенное регулярное выражение для разделения предложений
@@ -260,7 +265,7 @@ def split_into_sentences(text):
 
         if line.startswith('{') and line.endswith('}'):
             section_name = line[1:-1].strip()
-            sections[section_name] = sentence_counter
+            sections.append((section_name, sentence_counter))
         else:
             # Разделяем предложения, сохраняя знаки пунктуации
             parts = sentence_end.split(line)
@@ -281,9 +286,23 @@ def split_into_sentences(text):
                     sentences.append(sent)
                     sentence_counter += 1
 
-    with open('sections.txt', 'w', encoding='utf-8') as f:
-        for section, start in sections.items():
+    return sentences, sections
+
+
+def write_sections_file(sections, file_path='sections.txt'):
+    with open(file_path, 'w', encoding='utf-8') as f:
+        for section, start in sections:
             f.write(f"'{section}' {start}\n")
+
+
+def split_into_sentences(text):
+    """
+    Разбивает текст на предложения, сохраняя разделы и их номера.
+    Сохраняет все знаки пунктуации в предложениях.
+    """
+    sentences, sections = extract_sentences_and_sections(text)
+
+    write_sections_file(sections)
 
     return sentences
 
@@ -324,7 +343,54 @@ def read_sections(file_path):
 
     return positions, labels
 
-def save_results_to_text(sentences, sentiments, filename="sentiment_data.txt"):
+
+def format_metric_lines(metrics):
+    return [
+        f"{label}: {metrics[key]:.6f}"
+        for key, label in METRIC_DISPLAY_NAMES
+    ]
+
+
+def annotate_extreme_point(ax, x_value, y_value, color, y_offset):
+    ax.scatter(x_value, y_value, color=color, s=40, zorder=3)
+    ax.annotate(
+        f"{y_value:.3f}",
+        xy=(x_value, y_value),
+        xytext=(10, y_offset),
+        textcoords="offset points",
+        fontsize=9,
+        color=color,
+        weight="bold",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+    )
+
+
+def highlight_mean_tick(ax, mean_value):
+    y_ticks = list(ax.get_yticks())
+    if not any(abs(tick - mean_value) < 0.001 for tick in y_ticks):
+        y_ticks.append(mean_value)
+        y_ticks.sort()
+
+    y_labels = []
+    for tick in y_ticks:
+        if abs(tick - mean_value) < 0.001:
+            y_labels.append(f"{tick:.3f}")
+        else:
+            y_labels.append(f"{tick:.2f}")
+
+    ax.set_yticks(y_ticks, y_labels, fontsize=9)
+    for tick in ax.yaxis.get_major_ticks():
+        if abs(tick.get_loc() - mean_value) < 0.001:
+            tick.tick1line.set_color("brown")
+            tick.tick1line.set_linewidth(2.5)
+            tick.tick2line.set_color("brown")
+            tick.tick2line.set_linewidth(2.5)
+            tick.label1.set_color("brown")
+            tick.label1.set_weight("bold")
+            tick.label1.set_fontsize(10)
+
+
+def save_results_to_text(sentences, sentiments, filename="sentiment_data.txt", metrics=None):
     """
     Сохраняет результаты в простом текстовом файле.
 
@@ -334,38 +400,92 @@ def save_results_to_text(sentences, sentiments, filename="sentiment_data.txt"):
     with open(filename, "w", encoding="utf-8") as f:
         for i, sentiment in enumerate(sentiments):
             f.write(f"{sentiment:+.2f} {sentences[i]}\n")
+
+        if metrics:
+            f.write("\n")
+            f.write("Метрики графика:\n")
+            for line in format_metric_lines(metrics):
+                f.write(f"{line}\n")
             
 
-def plot_sentiment_curve(sentiments, sentences, section_positions, section_labels, chunk_size, output_image="sentiment_curve.png"):
-    window_size = 2*chunk_size + 1
-    polynom_order = 0
-
-    smoothed_savgol = savgol_filter(sentiments, window_size, polynom_order, mode='interp')
+def plot_sentiment_curve(
+    sentiments,
+    sentences,
+    section_positions,
+    section_labels,
+    chunk_size,
+    output_image="sentiment_curve.png",
+    title_note=None,
+):
+    window_size = 2 * chunk_size + 1
     smoothed_uniform = uniform_filter1d(sentiments, window_size)
-    smoothed_conv = np.convolve(sentiments, np.ones(window_size)/window_size, mode='same')
+
+    volatility_amplitude = float(np.std(smoothed_uniform))
+    path_length = float(np.sum(np.abs(np.diff(smoothed_uniform))))
+    mean_change = path_length / len(smoothed_uniform) if len(smoothed_uniform) > 0 else 0.0
 
     x = range(1, len(sentences) + 1)
 
-    plt.figure(figsize=(12, 6))
-    plt.plot(x, sentiments, label="RuSentiLex", linewidth=0.5, color="blue")
-    plt.plot(x, smoothed_savgol, label="Фильтр Савицкого-Голея", linewidth=1.5, color="red")
-    plt.plot(x, smoothed_uniform, label="Скользящее среднее", linewidth=1.5, color="green")
-    plt.plot(x, smoothed_conv, label="Сглаживание", linewidth=1.5, color="magenta")
+    fig, ax = plt.subplots(figsize=(12, 6.8))
+    ax.plot(x, sentiments, label="RuSentiLex", linewidth=0.5, color="blue")
+    ax.plot(x, smoothed_uniform, label="Скользящее среднее", linewidth=1.5, color="green")
+
+    max_index = int(np.argmax(smoothed_uniform))
+    min_index = int(np.argmin(smoothed_uniform))
+    max_value = float(smoothed_uniform[max_index])
+    min_value = float(smoothed_uniform[min_index])
+    annotate_extreme_point(ax, max_index + 1, max_value, "red", 10)
+    annotate_extreme_point(ax, min_index + 1, min_value, "blue", -15)
+    ax.axhline(y=max_value, color="red", linestyle="-", linewidth=2, alpha=0.8)
+    ax.axhline(y=min_value, color="blue", linestyle="-", linewidth=2, alpha=0.8)
+
+    max_index_original = int(np.argmax(sentiments))
+    min_index_original = int(np.argmin(sentiments))
+    max_value_original = float(sentiments[max_index_original])
+    min_value_original = float(sentiments[min_index_original])
+    annotate_extreme_point(ax, max_index_original + 1, max_value_original, "darkred", 10)
+    annotate_extreme_point(ax, min_index_original + 1, min_value_original, "darkblue", -15)
+    ax.axhline(y=max_value_original, color="darkred", linestyle="--", linewidth=2, alpha=0.8)
+    ax.axhline(y=min_value_original, color="darkblue", linestyle="--", linewidth=2, alpha=0.8)
+
+    mean_value = float(np.mean(smoothed_uniform))
+    upper_bound = mean_value + volatility_amplitude
+    lower_bound = mean_value - volatility_amplitude
+    ax.fill_between(x, lower_bound, upper_bound, alpha=0.2, color="gray")
+    ax.axhline(y=upper_bound, color="brown", linestyle="--", linewidth=2, alpha=0.7)
+    ax.axhline(y=lower_bound, color="brown", linestyle="--", linewidth=2, alpha=0.7)
+    ax.axhline(y=mean_value, color="brown", linestyle="-", linewidth=2, alpha=0.8)
+    highlight_mean_tick(ax, mean_value)
 
     if section_positions:
         for position in section_positions:
-            plt.axvline(x=position, color='gray', linestyle='--', linewidth=1, alpha=0.7)
-        plt.xticks(section_positions, section_labels, rotation=45, fontsize=10)
+            ax.axvline(x=position, color='gray', linestyle='--', linewidth=1, alpha=0.7)
+        ax.set_xticks(section_positions, section_labels, rotation=45, fontsize=10)
 
-    plt.grid(which='major', axis='y', linestyle='-', linewidth=0.5, color='gray', alpha=0.7)
+    ax.grid(which='major', axis='y', linestyle='-', linewidth=0.5, color='gray', alpha=0.7)
 
-    plt.title('Кривые эмоциональной тональности', fontsize=14)
-    plt.xlabel('Главы' if section_positions else 'Предложения', fontsize=12)
-    plt.ylabel('Оценка тональности [-1;1]', fontsize=12)
-    plt.legend(fontsize=12)
+    title_suffix = title_note or f"chunk_size = {chunk_size}"
+    ax.set_title(f'Кривые эмоциональной тональности ({title_suffix})', fontsize=14)
+    ax.set_xlabel('Главы' if section_positions else 'Предложения', fontsize=12, labelpad=12)
+    ax.set_ylabel('Оценка тональности [-1;1]', fontsize=12)
+    ax.legend(fontsize=12)
 
-    plt.savefig(output_image)
-    plt.close()
+    metrics_text = "    ".join(format_metric_lines({
+        "volatility_amplitude": volatility_amplitude,
+        "path_length": path_length,
+        "mean_change": mean_change,
+    }))
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.90, bottom=0.28)
+    fig.text(0.5, 0.06, metrics_text, ha='center', va='bottom', fontsize=10)
+
+    fig.savefig(output_image, bbox_inches='tight', pad_inches=0.25)
+    plt.close(fig)
+
+    return {
+        "volatility_amplitude": volatility_amplitude,
+        "path_length": path_length,
+        "mean_change": mean_change,
+    }
 
 
 def calculate_sentences_sentiments(sentences, section_positions, chunk_size, lexicon, phrase_lexicon):
