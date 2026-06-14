@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Sentilex Desktop - Variant A (Minimalism Modern)</string>
+   <string>SentiSoft Desktop - Variant A (Minimalism Modern)</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow {background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #eef3f6, stop:1 #dbe7ef);} 
@@ -40,7 +40,7 @@ QPushButton#browseButton, QPushButton#downloadTxtButton, QPushButton#downloadPng
     <item>
      <widget class="QLabel" name="titleLabel">
       <property name="text">
-       <string>Sentilex Desktop</string>
+       <string>SentiSoft Desktop</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignHCenter|Qt::AlignVCenter</set>

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Sentilex Desktop - Variant C (Friendly)</string>
+   <string>SentiSoft Desktop - Variant C (Friendly)</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow { background: qradialgradient(cx:0.2, cy:0.2, radius:1.0, fx:0.2, fy:0.2, stop:0 #fff8ef, stop:1 #ffe2c5); }
@@ -57,7 +57,7 @@ QPushButton#browseButton, QPushButton#downloadTxtButton, QPushButton#downloadPng
        <item>
         <widget class="QLabel" name="titleLabel">
          <property name="text">
-          <string>Sentilex: дружелюбный режим</string>
+          <string>SentiSoft: дружелюбный режим</string>
          </property>
          <property name="styleSheet">
           <string notr="true">font-size: 30px; font-weight: 700; color: #7a3410;</string>

@@ -38,10 +38,10 @@ if (-not (Test-Path $venvPython)) {
 
 $venvVersion = & $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
 if ([Version]$venvVersion -ge [Version]"3.12") {
-    throw "Detected Python $venvVersion in $VenvPath. Use Python 3.10 or 3.11 for Sentilex desktop build (pymorphy2 compatibility)."
+    throw "Detected Python $venvVersion in $VenvPath. Use Python 3.10 or 3.11 for SentiSoft desktop build (pymorphy2 compatibility)."
 }
 
-Get-Process -Name "Sentilex" -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Name "SentiSoft" -ErrorAction SilentlyContinue | Stop-Process -Force
 if (Test-Path (Join-Path $repoRoot "build")) {
     Remove-Item (Join-Path $repoRoot "build") -Recurse -Force
 }
@@ -93,8 +93,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($OneFile) {
-    Write-Host "Build complete (onefile): dist/Sentilex.exe"
+    Write-Host "Build complete (onefile): dist/SentiSoft.exe"
 }
 else {
-    Write-Host "Build complete (onedir): dist/Sentilex/"
+    Write-Host "Build complete (onedir): dist/SentiSoft/"
 }

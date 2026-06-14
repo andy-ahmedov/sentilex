@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Sentilex Desktop - Variant B (Pro Tool)</string>
+   <string>SentiSoft Desktop - Variant B (Pro Tool)</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow { background: #e9ecef; }
@@ -70,7 +70,7 @@ QLabel#errorBanner { background: #fee2e2; color: #9f1239; border: 1px solid #fec
        <item>
         <widget class="QLabel" name="appTitle">
          <property name="text">
-          <string>Sentilex Pro Console</string>
+          <string>SentiSoft Pro Console</string>
          </property>
          <property name="styleSheet">
           <string notr="true">font-size: 22px; font-weight: 700; color: #102a43;</string>
