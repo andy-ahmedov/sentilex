@@ -25,6 +25,7 @@ from scipy.ndimage import uniform_filter1d
 SCRIPT_MARKER = "SENTILEX_EXPORT_SCRIPT"
 LEXICON_PAYLOAD = "__LEXICON_BASE64__"
 DEFAULT_CHUNK_SIZE = __DEFAULT_CHUNK_SIZE__
+CHAPTER_LABEL_STEP = 1
 
 # Plot customization block. Edit these values to adjust the exported figure.
 RAW_LINE_COLOR = "blue"
@@ -657,7 +658,9 @@ def plot_sentiment_curve(
     chunk_size,
     output_image="sentiment_curve.png",
     title_note=None,
+    chapter_label_step=None,
 ):
+    chapter_label_step = CHAPTER_LABEL_STEP if chapter_label_step is None else chapter_label_step
     window_size = 2 * chunk_size + 1
     smoothed_uniform = uniform_filter1d(sentiments, window_size)
 
@@ -669,7 +672,7 @@ def plot_sentiment_curve(
 
     x = range(1, len(sentences) + 1)
 
-    fig, ax = plt.subplots(figsize=(12, 6.8))
+    fig, ax = plt.subplots(figsize=(14, 7.8))
     ax.set_axisbelow(True)
     draw_emotional_phase_backgrounds(ax, emotional_phases)
     ax.plot(x, sentiments, label="RuSentiLex", linewidth=RAW_LINE_WIDTH, color=RAW_LINE_COLOR, zorder=3)
@@ -688,8 +691,8 @@ def plot_sentiment_curve(
     min_value = float(smoothed_uniform[min_index])
     annotate_extreme_point(ax, max_index + 1, max_value, "red", 10)
     annotate_extreme_point(ax, min_index + 1, min_value, "blue", -15)
-    ax.axhline(y=max_value, color="red", linestyle="-", linewidth=2, alpha=0.8)
-    ax.axhline(y=min_value, color="blue", linestyle="-", linewidth=2, alpha=0.8)
+    ax.axhline(y=max_value, label="Максимум сглаженной кривой", color="red", linestyle="-", linewidth=2, alpha=0.8)
+    ax.axhline(y=min_value, label="Минимум сглаженной кривой", color="blue", linestyle="-", linewidth=2, alpha=0.8)
 
     max_index_original = int(np.argmax(sentiments))
     min_index_original = int(np.argmin(sentiments))
@@ -697,16 +700,16 @@ def plot_sentiment_curve(
     min_value_original = float(sentiments[min_index_original])
     annotate_extreme_point(ax, max_index_original + 1, max_value_original, "darkred", 10)
     annotate_extreme_point(ax, min_index_original + 1, min_value_original, "darkblue", -15)
-    ax.axhline(y=max_value_original, color="darkred", linestyle="--", linewidth=2, alpha=0.8)
-    ax.axhline(y=min_value_original, color="darkblue", linestyle="--", linewidth=2, alpha=0.8)
+    ax.axhline(y=max_value_original, label="Максимум исходной кривой", color="darkred", linestyle="--", linewidth=2, alpha=0.8)
+    ax.axhline(y=min_value_original, label="Минимум исходной кривой", color="darkblue", linestyle="--", linewidth=2, alpha=0.8)
 
     mean_value = float(np.mean(smoothed_uniform))
     upper_bound = mean_value + volatility_amplitude
     lower_bound = mean_value - volatility_amplitude
-    ax.fill_between(x, lower_bound, upper_bound, alpha=MEAN_CORRIDOR_ALPHA, color="gray", zorder=0.5)
-    ax.axhline(y=upper_bound, color="brown", linestyle="--", linewidth=2, alpha=0.7)
+    ax.fill_between(x, lower_bound, upper_bound, label="Коридор среднего ± σ", alpha=MEAN_CORRIDOR_ALPHA, color="gray", zorder=0.5)
+    ax.axhline(y=upper_bound, label="Среднее ± σ: границы коридора", color="brown", linestyle="--", linewidth=2, alpha=0.7)
     ax.axhline(y=lower_bound, color="brown", linestyle="--", linewidth=2, alpha=0.7)
-    ax.axhline(y=mean_value, color="brown", linestyle="-", linewidth=2, alpha=0.8)
+    ax.axhline(y=mean_value, label="Среднее сглаженной кривой", color="brown", linestyle="-", linewidth=2, alpha=0.8)
     highlight_mean_tick(ax, mean_value)
 
     tick_positions, tick_labels = filter_section_ticks(section_positions, section_labels)
@@ -720,7 +723,7 @@ def plot_sentiment_curve(
                 alpha=SECTION_LINE_ALPHA,
                 zorder=1,
             )
-        ax.set_xticks(tick_positions, tick_labels, rotation=45, fontsize=10)
+        ax.set_xticks(tick_positions[::max(1, int(chapter_label_step))], tick_labels[::max(1, int(chapter_label_step))], rotation=45, ha="right", fontsize=9)
 
     ax.grid(which="major", axis="y", linestyle="-", linewidth=0.5, color="gray", alpha=0.7)
 
@@ -729,7 +732,14 @@ def plot_sentiment_curve(
     ax.set_title(plot_title, fontsize=14)
     ax.set_xlabel(CUSTOM_X_LABEL or ("Главы" if section_positions else "Предложения"), fontsize=12, labelpad=12)
     ax.set_ylabel(CUSTOM_Y_LABEL, fontsize=12)
-    ax.legend(fontsize=12)
+    from matplotlib.patches import Patch
+    handles, _ = ax.get_legend_handles_labels()
+    handles += [Patch(facecolor=PHASE_BACKGROUND_COLORS[k], alpha=PHASE_BACKGROUND_ALPHA,
+                      label="Фон: " + PHASE_DISPLAY_NAMES[k] + " фаза") for k in PHASE_TYPES]
+    ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1), fontsize=8)
+    # Grey vertical lines denote all chapter boundaries, regardless of label stride.
+    if section_positions:
+        ax.text(0, -0.29, "Серые вертикали — границы глав; подписи: каждая " + str(chapter_label_step) + "-я глава", transform=ax.transAxes, fontsize=8)
 
     metrics_text = "    ".join(format_metric_lines({
         "volatility_amplitude": volatility_amplitude,
@@ -737,7 +747,7 @@ def plot_sentiment_curve(
         "mean_change": mean_change,
     }))
     phase_summary_text = format_phase_plot_summary(phase_metrics)
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.90, bottom=0.28)
+    fig.subplots_adjust(left=0.08, right=0.75, top=0.90, bottom=0.30)
     fig.text(0.5, 0.075, metrics_text, ha="center", va="bottom", fontsize=10)
     if phase_summary_text:
         fig.text(0.5, 0.045, phase_summary_text, ha="center", va="bottom", fontsize=10)
@@ -838,11 +848,12 @@ def _encode_lexicon_payload(lexicon_path: Path) -> str:
     return base64.b64encode(zlib.compress(lexicon_path.read_bytes(), level=9)).decode("ascii")
 
 
-def build_export_script(*, default_chunk_size: int, lexicon_path: str | Path) -> str:
+def build_export_script(*, default_chunk_size: int, lexicon_path: str | Path, chapter_label_step=1) -> str:
     lexicon_payload = _encode_lexicon_payload(Path(lexicon_path))
     return (
         EXPORT_SCRIPT_TEMPLATE.replace("__LEXICON_BASE64__", lexicon_payload)
         .replace("__DEFAULT_CHUNK_SIZE__", str(default_chunk_size))
+        .replace("CHAPTER_LABEL_STEP = 1", "CHAPTER_LABEL_STEP = " + str(chapter_label_step))
     )
 
 
@@ -851,11 +862,12 @@ def export_analysis_script(
     *,
     default_chunk_size: int,
     lexicon_path: str | Path,
+    chapter_label_step=1,
 ) -> Path:
     target_path = Path(script_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(
-        build_export_script(default_chunk_size=default_chunk_size, lexicon_path=lexicon_path),
+        build_export_script(default_chunk_size=default_chunk_size, lexicon_path=lexicon_path, chapter_label_step=chapter_label_step),
         encoding="utf-8",
     )
     return target_path

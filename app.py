@@ -171,7 +171,7 @@ def upload_file():
     return render_dashboard(default_chunk_size=default_chunk_size, result=LAST_RESULT)
 
 
-def process_text(file_path, filename, chunk_size, export_script_file=False, include_analysis_data=False):
+def process_text(file_path, filename, chunk_size, export_script_file=False, include_analysis_data=False, chapter_label_step=1):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -201,6 +201,7 @@ def process_text(file_path, filename, chunk_size, export_script_file=False, incl
         section_labels,
         chunk_size,
         plot_path,
+        chapter_label_step=chapter_label_step,
     )
     functions.save_results_to_text(sentences, sentiments, results_path, plot_metrics)
 
@@ -224,6 +225,7 @@ def process_text(file_path, filename, chunk_size, export_script_file=False, incl
             script_path,
             default_chunk_size=chunk_size,
             lexicon_path=LEXICON_PATH,
+            chapter_label_step=chapter_label_step,
         )
         artifacts["result_py"] = script_path
 
