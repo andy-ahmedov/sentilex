@@ -60,6 +60,13 @@ def validate_case(
             f"Sentence count label does not mention {sentence_count}: {sentence_text!r}"
         )
 
+    controller.chunk_number.setValue(min(37, sentence_count))
+    chosen = controller.chunk_number.value()
+    assert controller.allowed_chunk_sizes[controller.chunk_slider.value()] == chosen
+    controller.chunk_slider.setValue(0)
+    assert controller.chunk_number.value() == controller.allowed_chunk_sizes[0]
+    controller._configure_chunk_slider(0)
+    assert not controller.chunk_number.isEnabled()
     window.close()
     app.processEvents()
 

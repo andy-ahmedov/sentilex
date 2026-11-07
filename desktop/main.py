@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSlider,
+    QSpinBox,
     QSplitter,
     QSizePolicy,
     QVBoxLayout,
@@ -107,8 +108,9 @@ class AnalysisWorker(QObject):
     finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, file_path: Path, chunk_size: int, emotion_path=None) -> None:
+    def __init__(self, file_path: Path, chunk_size: int, emotion_path=None, chapter_label_step=1) -> None:
         super().__init__()
+        self.chapter_label_step = chapter_label_step
         self.emotion_path = emotion_path
         self.file_path = file_path
         self.chunk_size = chunk_size
@@ -122,6 +124,7 @@ class AnalysisWorker(QObject):
                 filename,
                 self.chunk_size,
                 export_script_file=True,
+                chapter_label_step=self.chapter_label_step,
                 include_analysis_data=bool(self.emotion_path),
             )
 
@@ -190,6 +193,25 @@ class MainWindowController(QObject):
         self.allowed_chunk_sizes: list[int] = []
         self.selected_sentence_count = 0
 
+        self.chunk_number = QSpinBox()
+        self.chunk_number.setObjectName("chunkSizeInput")
+        self.chunk_number.setKeyboardTracking(False)
+        self.chunk_number.setPrefix("Размер фрагмента: ")
+        self.chunk_number.setRange(1, 1)
+        self.chunk_number.setEnabled(False)
+        self.chapter_step = QSpinBox()
+        self.chapter_step.setObjectName("chapterLabelStep")
+        self.chapter_step.setRange(1, 100000)
+        self.chapter_step.setPrefix("Подписывать каждую ")
+        self.chapter_step.setSuffix("-ю главу")
+        self.chapter_step.setToolTip("1 — все главы, 5 — главы 1, 6, 11… Только подписи, не размер анализа.")
+        for layout in self.control_panel.findChildren(QBoxLayout):
+            index = layout.indexOf(self.chunk_current_label)
+            if index >= 0:
+                layout.insertWidget(index + 1, self.chunk_number)
+                layout.insertWidget(index + 2, self.chapter_step)
+                break
+        self.chunk_number.valueChanged.connect(self._on_chunk_number_changed)
         self.settings = QSettings("Sentilex", "Sentilex")
         self.emotion_path = self.settings.value("nrc_path", "")
         self.emotion_results = {}
@@ -331,11 +353,27 @@ class MainWindowController(QObject):
         self._set_plot_click_enabled(False)
 
     @Slot(int)
+    def _on_chunk_number_changed(self, value):
+        if not self.allowed_chunk_sizes or self.analysis_in_progress:
+            return
+        if value not in self.allowed_chunk_sizes:
+            self.allowed_chunk_sizes = sorted(self.allowed_chunk_sizes + [value])
+        self.chunk_slider.blockSignals(True)
+        self.chunk_slider.setMaximum(len(self.allowed_chunk_sizes) - 1)
+        self.chunk_slider.setValue(self.allowed_chunk_sizes.index(value))
+        self.chunk_slider.blockSignals(False)
+        self.chunk_min_label.setText(str(self.allowed_chunk_sizes[0]))
+        self.chunk_current_label.setText(f"Текущее значение: {value}")
+
+    @Slot(int)
     def _on_chunk_changed(self, index: int) -> None:
         if not self.allowed_chunk_sizes:
             self.chunk_current_label.setText("Текущее значение: недоступно")
             return
         clamped_index = max(0, min(index, len(self.allowed_chunk_sizes) - 1))
+        self.chunk_number.blockSignals(True)
+        self.chunk_number.setValue(self.allowed_chunk_sizes[clamped_index])
+        self.chunk_number.blockSignals(False)
         self.chunk_current_label.setText(
             f"Текущее значение: {self.allowed_chunk_sizes[clamped_index]}"
         )
@@ -363,6 +401,10 @@ class MainWindowController(QObject):
 
     def _configure_chunk_slider(self, sentence_count: int) -> None:
         self.selected_sentence_count = sentence_count
+        self.chunk_number.blockSignals(True)
+        self.chunk_number.setRange(1, max(1, sentence_count))
+        self.chunk_number.setEnabled(sentence_count > 0)
+        self.chunk_number.blockSignals(False)
         self.allowed_chunk_sizes = self._build_allowed_chunk_sizes(sentence_count)
 
         if not self.allowed_chunk_sizes:
@@ -384,6 +426,9 @@ class MainWindowController(QObject):
         self.chunk_slider.setValue(default_index)
         self.chunk_slider.blockSignals(False)
 
+        self.chunk_number.blockSignals(True)
+        self.chunk_number.setValue(default_chunk_size)
+        self.chunk_number.blockSignals(False)
         self.chunk_slider.setEnabled(True)
         self.chunk_min_label.setText(str(self.allowed_chunk_sizes[0]))
         self.chunk_max_label.setText(str(self.allowed_chunk_sizes[-1]))
@@ -435,6 +480,8 @@ class MainWindowController(QObject):
 
     def _set_analyzing_state(self) -> None:
         self.analysis_in_progress = True
+        self.chunk_number.setEnabled(False)
+        self.chapter_step.setEnabled(False)
         self.status_label.setText("Состояние: analyzing")
         self.progress_bar.setVisible(True)
         self.submit_button.setEnabled(False)
@@ -448,6 +495,8 @@ class MainWindowController(QObject):
         self._set_plot_click_enabled(False)
 
     def _set_done_state(self) -> None:
+        self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
+        self.chapter_step.setEnabled(True)
         self.status_label.setText("Состояние: done")
         self.progress_bar.setVisible(False)
         self.browse_button.setEnabled(True)
@@ -461,6 +510,8 @@ class MainWindowController(QObject):
         self._set_plot_click_enabled(self.current_plot_pixmap is not None)
 
     def _set_error_state(self, message: str) -> None:
+        self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
+        self.chapter_step.setEnabled(True)
         self.status_label.setText("Состояние: error")
         self.progress_bar.setVisible(False)
         self.browse_button.setEnabled(True)
@@ -508,7 +559,7 @@ class MainWindowController(QObject):
             self.nrc_status.setText("NRC: не подключён")
         chunk_size = self.allowed_chunk_sizes[self.chunk_slider.value()]
         self.thread = QThread(self.window)
-        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.emotion_path or None)
+        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.emotion_path or None, self.chapter_step.value())
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
