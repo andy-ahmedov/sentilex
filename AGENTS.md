@@ -132,3 +132,5 @@ For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
 - Windows builds from WSL UNC sources use `%LOCALAPPDATA%/SentilexBuild/venv`; `-VenvPath` accepts an absolute Windows path. The builder bootstraps pip if needed.
 - Frozen verification: set `SENTILEX_SMOKE_INPUT` and `SENTILEX_SMOKE_REPORT` to absolute paths; optional `SENTILEX_SMOKE_NRC` selects an external archive. The exe runs the actual worker, renders its results, writes a JSON manifest and PNG next to the report, and exits.
 - GUI regression: `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_emotion_gui.py` (requires the local external archive).
+
+- `powershell -ExecutionPolicy Bypass -File tools/smoke_frozen.ps1 [-NrcPath <ZIP-or-XLSX>]` tests a local NTFS copy of dist/SentiSoft.exe; manifest/screenshot are copied to dist. It compares tone TXT after CRLF normalization.

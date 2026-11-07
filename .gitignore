@@ -6,6 +6,7 @@ tools/*
 !tools/golden_e2e.sh
 !tools/golden_http.py
 !tools/smoke_chunk_precision.py
+!tools/smoke_frozen.ps1
 .venv/
 __pycache__/
 *.py[cod]

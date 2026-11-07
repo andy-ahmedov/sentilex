@@ -329,3 +329,7 @@ GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify
 Проверка: `.venv/bin/python desktop/smoke_emotions.py`. Для импорта нужен `openpyxl` из `desktop/requirements.txt`.
 
 При Windows-сборке из WSL/UNC окружение создаётся на диске Windows в `%LOCALAPPDATA%\SentilexBuild\venv`. Можно указать абсолютный путь через `-VenvPath`. Готовый `dist/SentiSoft.exe` распространяется без NRC; каждый пользователь подключает собственную копию словаря.
+
+Порядок работы: выберите исходный `.txt`, подключите NRC ZIP/XLSX, задайте размер фрагмента и нажмите «Анализировать». Вкладка «Тональность» сохраняет прежний результат, вкладка «Эмоции» показывает новый график; нажмите на изображение для увеличения. Под ним находятся отдельные кнопки сохранения эмоций PNG/TXT/CSV.
+
+Проверка готового Windows exe: `powershell -ExecutionPolicy Bypass -File tools/smoke_frozen.ps1 -NrcPath "C:\путь\NRC-Suite-of-Sentiment-Emotion-Lexicons.zip"`. Без `-NrcPath` проверяется прежний режим тональности. Проверка выполняется на копии exe в `%LOCALAPPDATA%\SentilexBuild`, чтобы не запускать исполняемый файл непосредственно с UNC-ресурса; JSON и снимок результата сохраняются также в dist.

@@ -358,8 +358,10 @@ When implementation is complete, summarize:
 
 Approved: external NRC ZIP/XLSX, eight categories, same chunks, exact ties as equal color bands, separate emotion PNG/TXT/CSV, marker and sentence-weighted shares. No negation/context inference. Original sentiment outputs and PY remain unchanged. Windows onefile and all affected smoke checks required.
 
-Progress: [x] engine/import/reports; [x] desktop integration; [ ] Windows build and verification.
+Progress: [x] engine/import/reports; [x] desktop integration; [x] Windows build and verification.
 
 Decisions: openpyxl desktop-only; external path in QSettings; translated duplicate lemmas union categories; longest phrase match; zero markers distinct from neutrality.
 
 NRC validation progress: real archive imported (3837 normalized entries); artificial counts/ties/phrases and report generation passed; real literary input produced all artifacts; desktop wide/stacked and slider passed; GUI worker/tab refresh passed; web golden unchanged. Added opt-in packaged worker/UI smoke. Desktop uses Agg for safe rendering in QThread. Windows UNC build environment moved to LOCALAPPDATA after reproducing site-packages discovery failure. Final Windows build pending.
+
+Final NRC outcome (2026-11-07): Windows onefile dist/SentiSoft.exe rebuilt after palette correction. tools/smoke_frozen.ps1 passed on the final executable with NRC and without NRC; both matched the previous tone golden after CRLF normalization. Frozen worker/UI generated required files and screenshots, inspected on Windows and offscreen. Desktop counts/import, GUI refresh, wide/stacked layout and chunk slider passed; reanalysis passed on isolated rerun; standalone export passed. Full `GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify` passed. Scientific evaluation against the colleagues' manual annotation remains a user research step; no accuracy claim is made.
