@@ -1,6 +1,7 @@
 param(
     [string]$NrcPath = "",
-    [string]$ReportName = "frozen-smoke"
+    [string]$ReportName = "frozen-smoke",
+    [string]$ExePath = ""
 )
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath
@@ -8,7 +9,8 @@ $sourceDir = Join-Path $repoRoot "dist"
 $exeDir = Join-Path $env:LOCALAPPDATA "SentilexBuild\smoke-$ReportName"
 New-Item -ItemType Directory -Force -Path $exeDir | Out-Null
 $exe = Join-Path $exeDir "SentiSoft.exe"
-Copy-Item (Join-Path $sourceDir "SentiSoft.exe") $exe -Force
+if (-not $ExePath) { $ExePath = Join-Path $sourceDir "SentiSoft.exe" }
+Copy-Item -LiteralPath $ExePath -Destination $exe -Force
 $report = Join-Path $exeDir "$ReportName.json"
 if (Test-Path $report) { Remove-Item $report }
 $keys = @("SENTILEX_SMOKE_INPUT", "SENTILEX_SMOKE_NRC", "SENTILEX_SMOKE_REPORT")
@@ -29,7 +31,7 @@ try {
     $paths = @($data.result_txt, $data.result_png, $data.result_py)
     if ($NrcPath) {
         if (-not $data.emotions) { throw "Missing emotion outputs" }
-        $paths += @($data.emotions.png, $data.emotions.txt, $data.emotions.csv)
+        $paths += @($data.emotions.png, $data.emotions.txt, $data.emotions.csv, $data.emotions.html)
     } elseif ($data.emotions) { throw "Unexpected emotion outputs without NRC" }
     foreach ($path in $paths) {
         $resolved = Join-Path $exeDir $path
@@ -40,6 +42,9 @@ try {
     if ($actual -cne $expected) { throw "Frozen TXT differs from golden baseline (after CRLF normalization)" }
     Copy-Item $report (Join-Path $sourceDir "$ReportName.json") -Force
     Copy-Item (Join-Path $exeDir "$ReportName.png") (Join-Path $sourceDir "$ReportName.png") -Force
+    if ($NrcPath) {
+        Copy-Item (Join-Path $exeDir "${ReportName}_markers.png") (Join-Path $sourceDir "${ReportName}_markers.png") -Force
+    }
     Write-Host "[smoke-frozen] OK: real exe worker/UI and golden TXT; NRC enabled: $([bool]$NrcPath)"
 } finally {
     foreach ($key in $keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key], "Process") }

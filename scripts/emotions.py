@@ -10,7 +10,7 @@ import zipfile
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
+from matplotlib.patches import Patch, Rectangle
 from matplotlib.colors import LinearSegmentedColormap
 
 KEYS = ('anger', 'anticipation', 'disgust', 'fear', 'joy', 'sadness', 'surprise', 'trust')
@@ -208,6 +208,29 @@ def draw_emotion_chunks(ax, chunks, smoothed):
         ax.axvline(chunks[-1]['end'] + .5, color='#777777', linewidth=.5, zorder=2)
 
 
+def draw_leader_matrix(ax, chunks):
+    """Use named rows and exact palette colors to disambiguate gradients."""
+    for chunk in chunks:
+        left = chunk['start'] - .5
+        width = chunk['end'] - chunk['start'] + 1
+        if chunk['leaders']:
+            for category in chunk['leaders']:
+                ax.add_patch(Rectangle((left, category - .5), width, 1,
+                                       facecolor=COLORS[category], linewidth=0))
+        else:
+            ax.add_patch(Rectangle((left, -.5), width, 8, facecolor='#eeeeee',
+                                   edgecolor='#999999', hatch='///', linewidth=0))
+        ax.axvline(left, color='#777777', linewidth=.4)
+    if chunks:
+        ax.axvline(chunks[-1]['end'] + .5, color='#777777', linewidth=.4)
+    for y in np.arange(.5, 7.5):
+        ax.axhline(y, color='#dddddd', linewidth=.4)
+    ax.set_yticks(range(8), LABELS, fontsize=9)
+    ax.set_ylim(7.5, -.5)
+    ax.set_title('Ведущие категории каждого фрагмента — точные цвета', fontsize=10)
+    ax.set_xlabel('Номер предложения')
+
+
 def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix):
     chunks = count_chunks(sentences, chunk_size, lexicon, morph)
     summary = summarize(chunks)
@@ -217,18 +240,19 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
         writer.writerow(['Фрагмент', 'Начало', 'Конец', 'Предложений', 'Слов'] + list(LABELS) + ['Лидеры'])
         for number, c in enumerate(chunks, 1):
             writer.writerow([number, c['start'], c['end'], c['end'] - c['start'] + 1, c['words']] + c['counts'] + [' / '.join(LABELS[i] for i in c['leaders']) or 'Маркеры не найдены'])
-    lines = ['Эмоциональные маркеры NRC EmoLex 0.92; автоматический русский перевод 2017', 'Авторы: Saif M. Mohammad, Peter D. Turney; NRC Canada', 'https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm', f'SHA256 источника: {digest}', f'Размер фрагмента: {chunk_size}', 'Лексические ассоциации; контекст и отрицания не интерпретируются.', 'Слово с несколькими метками учитывается в каждой категории.', 'Доли текста рассчитаны по предложениям; равные лидеры делят вклад поровну.', '']
+    lines = ['Эмоциональные кластеры NRC EmoLex 0.92; автоматический русский перевод 2017', 'Авторы: Saif M. Mohammad, Peter D. Turney; NRC Canada', 'https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm', f'SHA256 источника: {digest}', f'Размер фрагмента: {chunk_size}', 'Лексические ассоциации; контекст и отрицания не интерпретируются.', 'Слово с несколькими метками учитывается в каждой категории.', 'Доли текста рассчитаны по предложениям; равные лидеры делят вклад поровну.', '']
     for i, name in enumerate(LABELS):
         lines.append(f'{name}: {summary["totals"][i]}; доля маркеров {summary["marker_shares"][i]:.2%}; доля текста {summary["text_shares"][i]:.2%}')
     lines.append(f'Текст без маркеров: {summary["unknown_share"]:.2%}')
     lines.extend(['', 'Подсчёты по фрагментам:', Path(paths['csv']).read_text(encoding='utf-8-sig')])
     details, html = sentence_report(chunks)
     metadata = '<p>' + '<br>'.join(escape(line) for line in lines[:18]) + '</p>'
-    html = html.replace('<body>', '<body>' + metadata, 1)
+    html = html.replace('</body>', '<h2>Сводка и источник</h2>' + metadata + '</body>', 1)
     lines.extend(['', details])
     Path(paths['html']).write_text(html, encoding='utf-8')
     Path(paths['txt']).write_text('\n'.join(lines), encoding='utf-8')
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, (ax, matrix) = plt.subplots(2, 1, figsize=(14, 10), sharex=True,
+                                    gridspec_kw={'height_ratios': [4, 1.6], 'hspace': .18})
     try:
         x = range(1, len(sentiments) + 1)
         ax.set_facecolor('#f5f5f5')
@@ -239,19 +263,21 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
             ax.plot(np.r_[.5, x, len(sentiments) + .5],
                     np.r_[smoothed[0], smoothed, smoothed[-1]],
                     color='black', linewidth=2,
-                    label='Скользящее среднее тональности', zorder=4)
+                    label='Чёрная линия — сглаженная тональность', zorder=4)
             ax.set_xlim(.5, len(sentiments) + .5)
         ax.set_ylim(-1, 1)
-        ax.set(title=f'Тональность и ведущие эмоции NRC; фрагмент {chunk_size} предложений', xlabel='Номер предложения', ylabel='Тональность [-1; 1]')
+        ax.set(title=f'Тональность и эмоциональные кластеры NRC; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
+        ax.tick_params(axis='x', labelbottom=False)
+        draw_leader_matrix(matrix, chunks)
         handles, labels = ax.get_legend_handles_labels()
         handles += [Patch(facecolor=color, label=name) for color, name in zip(COLORS, LABELS)]
         handles.append(Patch(facecolor='#eeeeee', hatch='///', label='Маркеры не найдены'))
-        ax.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, -.16), ncol=4)
-        fig.text(.5, .055,
-                 f'Чёрная линия — скользящее среднее тональности, окно {2 * chunk_size + 1} предложений.\n'
-                 'Заливка — ведущие эмоции фрагмента; градиент — равные лидеры (снизу вверх в порядке легенды).',
+        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=4)
+        fig.text(.5, .035,
+                 'Градиент — равные лидеры. Их названия и чистые цвета показаны в матрице под кривой.\n'
+                 'Штриховка — маркеры не найдены; границы фрагментов сохранены.',
                  ha='center', fontsize=9)
-        fig.subplots_adjust(bottom=.33)
+        fig.subplots_adjust(bottom=.25, left=.11, right=.98)
         fig.savefig(paths['png'], bbox_inches='tight')
     finally:
         plt.close(fig)

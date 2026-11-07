@@ -48,6 +48,19 @@ def main():
     emotions.draw_emotion_chunks(ax, [dict(start=1, end=1, leaders=[0, 4])], [-1.])
     fig.canvas.draw()
     plt.close(fig)
+    fig, ax = plt.subplots(figsize=(10, 3), dpi=100)
+    emotions.draw_leader_matrix(ax, chunks)
+    ax.set_xlim(.5, 8.5)
+    fig.canvas.draw()
+    assert [t.get_text() for t in ax.get_yticklabels()] == list(emotions.LABELS)
+    assert len(ax.patches) == 7  # 1 + 2 + unknown + 3
+    pixels = np.asarray(fig.canvas.buffer_rgba())[:, :, :3] / 255
+    for x, categories in ((1, [0]), (3, [3, 4]), (7, [1, 2, 7])):
+        for category in categories:
+            assert np.allclose(pixel(x, category), to_rgb(emotions.COLORS[category]), atol=.01)
+    assert ax.patches[3].get_hatch() == '///'
+    fig.savefig('/tmp/sentilex-cluster-matrix.png')
+    plt.close(fig)
     print('[smoke-emotion-fills] OK')
 
 

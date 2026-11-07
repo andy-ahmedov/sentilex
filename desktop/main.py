@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
+    QTextBrowser,
     QProgressBar,
     QTabWidget,
     QWidget,
@@ -231,16 +232,29 @@ class MainWindowController(QObject):
         self.plot_tabs.addTab(self.plot_preview, "Тональность")
         emotion_page = QWidget()
         emotion_layout = QVBoxLayout(emotion_page)
-        self.emotion_preview = QLabel("Подключите NRC для анализа эмоций")
+        self.emotion_preview = QLabel("Подключите NRC для анализа эмоциональных кластеров")
         self.emotion_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.emotion_preview.setMinimumSize(100, 100)
         self.emotion_preview.installEventFilter(self)
         emotion_layout.addWidget(self.emotion_preview, 1)
         for kind in ("png", "txt", "csv"):
-            button = QPushButton("Сохранить эмоции " + kind.upper())
+            button = QPushButton("Сохранить кластеры " + kind.upper())
             button.clicked.connect(lambda checked=False, k=kind: self.save_emotion_result(k))
             emotion_layout.addWidget(button)
-        self.plot_tabs.addTab(emotion_page, "Эмоции")
+        self.plot_tabs.addTab(emotion_page, "Эмоциональные кластеры")
+        marker_page = QWidget()
+        marker_layout = QVBoxLayout(marker_page)
+        self.emotion_report = QTextBrowser()
+        self.emotion_report.setObjectName("emotionMarkerReport")
+        self.emotion_report.setOpenLinks(False)
+        self.emotion_report.setOpenExternalLinks(False)
+        self.emotion_report.setPlainText("Подключите NRC и выполните анализ для просмотра маркеров кластеров.")
+        marker_layout.addWidget(self.emotion_report, 1)
+        self.save_cluster_html_button = QPushButton("Сохранить отчёт кластеров HTML")
+        self.save_cluster_html_button.setEnabled(False)
+        self.save_cluster_html_button.clicked.connect(lambda: self.save_emotion_result("html"))
+        marker_layout.addWidget(self.save_cluster_html_button)
+        self.plot_tabs.addTab(marker_page, "Маркеры кластеров")
         self.results_splitter.insertWidget(index, self.plot_tabs)
         self.window.installEventFilter(self)
         self.upload_box.setCursor(self.browse_button.cursor())
@@ -384,7 +398,7 @@ class MainWindowController(QObject):
         if sentence_count <= 10:
             return list(range(1, sentence_count + 1))
 
-        allowed_sizes = list(range(10, sentence_count + 1, 10))
+        allowed_sizes = list(range(1, 10)) + list(range(10, sentence_count + 1, 10))
         if not allowed_sizes or allowed_sizes[-1] != sentence_count:
             allowed_sizes.append(sentence_count)
         return allowed_sizes
@@ -534,8 +548,10 @@ class MainWindowController(QObject):
             return
 
         self.emotion_results = {}
+        self.emotion_report.setPlainText("Идёт анализ кластеров..." if self.emotion_path else "NRC не подключён; выполняется только анализ тональности.")
+        self.save_cluster_html_button.setEnabled(False)
         self.emotion_preview.clear()
-        self.emotion_preview.setText("Идёт анализ эмоций..." if self.emotion_path else "NRC не подключён")
+        self.emotion_preview.setText("Идёт анализ эмоциональных кластеров..." if self.emotion_path else "NRC не подключён")
         self.current_result_txt = None
         self.current_result_png = None
         self.current_result_py = None
@@ -616,8 +632,14 @@ class MainWindowController(QObject):
     def on_analysis_finished(self, artifacts) -> None:
         txt_path, png_path, py_path = (artifacts[k] for k in ("result_txt", "result_png", "result_py"))
         self.emotion_results = artifacts.get("emotions", {})
-        self.refresh_emotion_preview()
         try:
+            self.refresh_emotion_preview()
+            if self.emotion_results:
+                self.emotion_report.setHtml(Path(self.emotion_results["html"]).read_text(encoding="utf-8"))
+                self.emotion_report.moveCursor(QTextCursor.MoveOperation.Start)
+            else:
+                self.emotion_report.setPlainText("NRC не подключён; маркеры кластеров не анализировались.")
+            self.save_cluster_html_button.setEnabled(bool(self.emotion_results))
             self.current_result_txt = Path(txt_path)
             self.current_result_png = Path(png_path)
             self.current_result_py = Path(py_path)
@@ -635,8 +657,10 @@ class MainWindowController(QObject):
     @Slot(str)
     def on_analysis_failed(self, message: str) -> None:
         self.emotion_results = {}
+        self.emotion_report.setPlainText("Ошибка анализа эмоциональных кластеров.")
+        self.save_cluster_html_button.setEnabled(False)
         self.emotion_preview.clear()
-        self.emotion_preview.setText("Ошибка анализа эмоций")
+        self.emotion_preview.setText("Ошибка анализа эмоциональных кластеров")
         self.current_result_txt = None
         self.current_result_png = None
         self.current_result_py = None
@@ -733,7 +757,7 @@ class MainWindowController(QObject):
     def refresh_emotion_preview(self):
         if not self.emotion_results:
             self.emotion_preview.clear()
-            self.emotion_preview.setText("Подключите NRC для анализа эмоций")
+            self.emotion_preview.setText("Подключите NRC для анализа эмоциональных кластеров")
         if self.emotion_results:
             pixmap = self._load_png_pixmap(Path(self.emotion_results["png"]))
             self.emotion_preview.setPixmap(pixmap.scaled(self.emotion_preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
@@ -767,7 +791,15 @@ class PackagedSmokeReceiver(QObject):
                 self.controller.plot_tabs.setCurrentIndex(1)
             self.app.processEvents()
             self.controller.window.grab().save(str(self.report.with_suffix(".png")))
+            if artifacts.get("emotions"):
+                if 'Лидеры предложения:' not in self.controller.emotion_report.toPlainText():
+                    raise RuntimeError("Packaged marker report was not rendered")
+                self.controller.plot_tabs.setCurrentIndex(2)
+                self.app.processEvents()
+                self.controller.window.grab().save(str(self.report.with_name(self.report.stem + "_markers.png")))
             self.report.write_text(json.dumps(artifacts, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            self.failed(str(exc))
         finally:
             self.thread.quit()
 

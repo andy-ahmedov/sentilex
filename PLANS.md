@@ -387,10 +387,14 @@ Implementation source of truth:
 - Slider initially offers 1..10, then tens and final sentence count; retain defaults and numeric arbitrary input. Rename user-facing NRC feature "Эмоциональные кластеры" while preserving technical names and keeping original tonal phases named "Эмоциональные фазы".
 - Update README, NRC guide, overview, AGENTS and change logs. After implementation validation, write a standalone 4–6 paragraph popular-science article description in docs/article_emotional_clusters.md without modifying existing article material.
 
-Progress: [x] marker/report engine; [ ] GUI and plot/slider; [ ] final verification and Windows exe; [ ] documentation/article and push.
+Progress: [x] marker/report engine; [x] GUI and plot/slider; [ ] final verification and Windows exe; [ ] documentation/article and push.
 Surprises & Discoveries: the displayed minimum 3 came from manually inserting 3 in a slider originally starting at 10; numeric input already allowed 1. Existing GUI tests assume exactly three artifacts and must now expect HTML too.
 Decision Log: the color designation is an eight-row matrix sharing the sentence X axis; each row has its emotion name, and every tied leader is filled. HTML is escaped and self-contained, no external resources/scripts. TXT summary and CSV columns stay stable except user-facing NRC naming; append sentence details to TXT. Internal file names/settings and original tone output remain compatible.
 Validation: NRC fixtures (ties/none/phrases/repeats/multi-labels), previous-count parity, HTML escaping and offsets, GUI refresh/clear, chunk 1/2/3 and empty controls, matrix render including dense inputs, actual Chapter_7_Karenina.txt, layout; full GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify; sequential export/reanalysis checks; rebuild Windows onefile and test frozen with/without NRC. Commit per logical block and push main after checks. External NRC and build artifacts stay untracked/ignored.
 Outcomes & Retrospective: pending.
 
 Marker milestone: smoke_emotions passed with real 3837-entry archive and synthetic offset, count aggregation, repetition, phrase, multi-label, tie, unknown and escaped HTML fixtures. Integration checks pending.
+
+Build discovery: PyInstaller reached final EXE assembly but WinError 5 prevented replacing dist/SentiSoft.exe. Inspecting running processes to confirm an active executable lock; do not terminate the user application. Build to a local NTFS staging directory and deliver dist/SentiSoft-clusters.exe instead, preserving the open old file. Add optional -ExePath to the frozen helper so the delivered versioned binary is tested directly. Document the alternate file/command.
+
+UI milestone: NRC GUI including HTML-save dispatch, tone-only and error clearing passed; slider 1/2/3, numeric sync, sentence counts 1/7/50/94/237 and layout checks passed. Main chapter/matrix and marker-tab renders inspected. Dense 240-chunk render passed. Actual prior implementation count/share parity passed at sizes 1/2/3/50. Running old exe lock confirmed by Win32_Process paths; build redirected to NTFS staging, delivery filename SentiSoft-clusters.exe.

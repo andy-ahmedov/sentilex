@@ -62,6 +62,12 @@ def validate_case(
             f"Sentence count label does not mention {sentence_count}: {sentence_text!r}"
         )
 
+    assert controller.chunk_number.minimum() == 1
+    assert controller.allowed_chunk_sizes[0] == 1
+    for value in range(1, min(3, sentence_count) + 1):
+        controller.chunk_slider.setValue(controller.allowed_chunk_sizes.index(value))
+        assert controller.chunk_number.value() == value
+
     controller.chunk_number.setFocus()
     controller.chunk_number.lineEdit().selectAll()
     QTest.keyClicks(controller.chunk_number.lineEdit(), str(min(37, sentence_count)))
@@ -83,8 +89,10 @@ def main() -> int:
     app.setStyle("Fusion")
 
     validate_case(app, 7, [1, 2, 3, 4, 5, 6, 7], 7)
-    validate_case(app, 50, [10, 20, 30, 40, 50], 50)
-    validate_case(app, 237, list(range(10, 231, 10)) + [237], 50)
+    validate_case(app, 50, list(range(1, 10)) + [10, 20, 30, 40, 50], 50)
+    validate_case(app, 94, list(range(1, 10)) + list(range(10, 91, 10)) + [94], 50)
+    validate_case(app, 237, list(range(1, 10)) + list(range(10, 231, 10)) + [237], 50)
+    validate_case(app, 1, [1], 1)
 
     print("[smoke-chunk] OK: chunk slider reflects sentence-count-based options")
     return 0
