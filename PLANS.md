@@ -368,4 +368,4 @@ Final NRC outcome (2026-11-07): Windows onefile dist/SentiSoft.exe rebuilt after
 
 ## Plot usability corrections
 Approved: explanatory legend for all plotted lines/backgrounds; desktop chapter-label stride (ordinal chapter order, default 1); numeric chunk input synchronized with existing file-dependent slider. Preserve scoring/TXT. Mirror plot changes and stride in exported PY. Validate controls, plots, export, golden and rebuilt Windows exe.
-Progress: pending.
+Progress: complete. Numeric keyboard entry and slider synchronization, file-dependent ranges, dense 240-chapter plot (stride 20 gives 12 labels), all 12 legend entries and exported CHAPTER_LABEL_STEP default passed. Layout and GUI render inspected. Standalone export smoke passed; full GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify passed with unchanged TXT. Rebuilt dist/SentiSoft.exe passed real Windows worker/UI checks with and without external NRC.

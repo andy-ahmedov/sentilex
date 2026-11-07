@@ -136,3 +136,5 @@ For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
 - `powershell -ExecutionPolicy Bypass -File tools/smoke_frozen.ps1 [-NrcPath <ZIP-or-XLSX>]` tests a local NTFS copy of dist/SentiSoft.exe; manifest/screenshot are copied to dist. It compares tone TXT after CRLF normalization.
 
 - Desktop numeric chunk input accepts 1…sentence_count and inserts exact values into the file-derived slider choices. Verify two-way synchronization with smoke_chunk_slider.py. Chapter-label stride is ordinal (1, 1+N, …), defaults to 1, preserves chapter boundaries and TXT; export mirrors it through CHAPTER_LABEL_STEP.
+
+- `.venv/bin/python desktop/smoke_plot_options.py` validates dense chapter labels, full plot legend and exported default chapter stride without changing metrics.

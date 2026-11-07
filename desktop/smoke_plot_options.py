@@ -17,7 +17,7 @@ metrics = []
 with tempfile.TemporaryDirectory() as folder:
     for index, function in enumerate((app.functions.plot_sentiment_curve, namespace['plot_sentiment_curve'])):
         with patch.object(plt, 'close'):
-            result = function(values, ['Текст.'] * 240, list(range(1, 241)), [f'Глава {i}' for i in range(1, 241)], 10, str(Path(folder) / f'{index}.png'), chapter_label_step=20)
+            result = function(values, ['Текст.'] * 240, list(range(1, 241)), [f'Глава {i}' for i in range(1, 241)], 10, str(Path(folder) / f'{index}.png'), **({"chapter_label_step": 20} if index == 0 else {}))
             figure = plt.gcf()
         assert len(figure.axes[0].get_xticks()) == 12
         labels = [item.get_text() for item in figure.axes[0].get_legend().get_texts()]

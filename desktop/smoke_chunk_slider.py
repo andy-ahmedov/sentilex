@@ -11,6 +11,8 @@ if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and not os
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtTest import QTest
+from PySide6.QtCore import Qt
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -60,7 +62,12 @@ def validate_case(
             f"Sentence count label does not mention {sentence_count}: {sentence_text!r}"
         )
 
-    controller.chunk_number.setValue(min(37, sentence_count))
+    controller.chunk_number.setFocus()
+    controller.chunk_number.lineEdit().selectAll()
+    QTest.keyClicks(controller.chunk_number.lineEdit(), str(min(37, sentence_count)))
+    QTest.keyClick(controller.chunk_number, Qt.Key_Return)
+    app.processEvents()
+    assert controller.chunk_number.value() == min(37, sentence_count)
     chosen = controller.chunk_number.value()
     assert controller.allowed_chunk_sizes[controller.chunk_slider.value()] == chosen
     controller.chunk_slider.setValue(0)
