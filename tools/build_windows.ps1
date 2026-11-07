@@ -9,10 +9,19 @@ if ($env:OS -ne "Windows_NT") {
     throw "This script must be run on Windows PowerShell."
 }
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath
 Set-Location $repoRoot
 
-$venvAbs = Join-Path $repoRoot $VenvPath
+if ($repoRoot.StartsWith("\\") -and $VenvPath -eq ".venv-win") {
+    # Windows Python cannot reliably discover site-packages on case-sensitive WSL UNC paths.
+    $venvAbs = Join-Path $env:LOCALAPPDATA "SentilexBuild\venv"
+}
+elseif ([System.IO.Path]::IsPathRooted($VenvPath)) {
+    $venvAbs = $VenvPath
+}
+else {
+    $venvAbs = Join-Path $repoRoot $VenvPath
+}
 if (-not (Test-Path $venvAbs)) {
     if (Get-Command py -ErrorAction SilentlyContinue) {
         & py -3.11 -m venv $venvAbs
@@ -47,6 +56,15 @@ if (Test-Path (Join-Path $repoRoot "build")) {
 }
 if (Test-Path (Join-Path $repoRoot "dist")) {
     Remove-Item (Join-Path $repoRoot "dist") -Recurse -Force
+}
+
+Write-Host "[build] ensure pip"
+& $venvPython -m pip --version
+if ($LASTEXITCODE -ne 0) {
+    & $venvPython -m ensurepip --upgrade
+    if ($LASTEXITCODE -ne 0) {
+        throw "pip bootstrap failed with exit code $LASTEXITCODE"
+    }
 }
 
 Write-Host "[build] pip upgrade"

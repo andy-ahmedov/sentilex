@@ -128,3 +128,7 @@ For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
 ## NRC desktop emotions
 - External NRC ZIP/XLSX must never be committed, bundled or embedded into exported PY. Ignore NRC archives and Windows build artifacts.
 - Run `.venv/bin/python desktop/smoke_emotions.py` for marker counts, ties, shares and external archive import. Desktop requires openpyxl from desktop/requirements.txt.
+
+- Windows builds from WSL UNC sources use `%LOCALAPPDATA%/SentilexBuild/venv`; `-VenvPath` accepts an absolute Windows path. The builder bootstraps pip if needed.
+- Frozen verification: set `SENTILEX_SMOKE_INPUT` and `SENTILEX_SMOKE_REPORT` to absolute paths; optional `SENTILEX_SMOKE_NRC` selects an external archive. The exe runs the actual worker, renders its results, writes a JSON manifest and PNG next to the report, and exits.
+- GUI regression: `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_emotion_gui.py` (requires the local external archive).

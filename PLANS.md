@@ -361,3 +361,5 @@ Approved: external NRC ZIP/XLSX, eight categories, same chunks, exact ties as eq
 Progress: [x] engine/import/reports; [x] desktop integration; [ ] Windows build and verification.
 
 Decisions: openpyxl desktop-only; external path in QSettings; translated duplicate lemmas union categories; longest phrase match; zero markers distinct from neutrality.
+
+NRC validation progress: real archive imported (3837 normalized entries); artificial counts/ties/phrases and report generation passed; real literary input produced all artifacts; desktop wide/stacked and slider passed; GUI worker/tab refresh passed; web golden unchanged. Added opt-in packaged worker/UI smoke. Desktop uses Agg for safe rendering in QThread. Windows UNC build environment moved to LOCALAPPDATA after reproducing site-packages discovery failure. Final Windows build pending.

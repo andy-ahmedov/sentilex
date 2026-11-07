@@ -96,6 +96,10 @@ if str(RUNTIME_ROOT) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import matplotlib  # noqa: E402
+
+# Workers render files; a GUI Matplotlib backend cannot run in QThread.
+matplotlib.use("Agg")
 import app as web_app  # noqa: E402
 
 
@@ -695,6 +699,31 @@ class MainWindowController(QObject):
 
 
 
+class PackagedSmokeReceiver(QObject):
+    def __init__(self, controller, app, thread, report):
+        super().__init__(controller.window)
+        self.controller, self.app, self.thread, self.report = controller, app, thread, report
+
+    @Slot(dict)
+    def complete(self, artifacts):
+        import json
+        try:
+            self.controller.on_analysis_finished(artifacts)
+            if artifacts.get("emotions"):
+                self.controller.plot_tabs.setCurrentIndex(1)
+            self.app.processEvents()
+            self.controller.window.grab().save(str(self.report.with_suffix(".png")))
+            self.report.write_text(json.dumps(artifacts, ensure_ascii=False), encoding="utf-8")
+        finally:
+            self.thread.quit()
+
+    @Slot(str)
+    def failed(self, message):
+        import json
+        self.report.write_text(json.dumps({"error": message}, ensure_ascii=False), encoding="utf-8")
+        self.thread.quit()
+
+
 def load_window() -> QMainWindow:
     ui_path = resource_path("desktop", "ui", "main.ui")
     loader = QUiLoader()
@@ -746,6 +775,21 @@ def main() -> int:
     window.show()
 
     window._controller = controller  # type: ignore[attr-defined]
+    # Opt-in packaged smoke exercises frozen resources and the real worker/UI.
+    if os.environ.get("SENTILEX_SMOKE_INPUT"):
+        import json
+        report = Path(os.environ["SENTILEX_SMOKE_REPORT"])
+        worker = AnalysisWorker(Path(os.environ["SENTILEX_SMOKE_INPUT"]), 50,
+                                os.environ.get("SENTILEX_SMOKE_NRC") or None)
+        thread = QThread(window)
+        worker.moveToThread(thread)
+        receiver = PackagedSmokeReceiver(controller, app, thread, report)
+        worker.finished.connect(receiver.complete)
+        worker.failed.connect(receiver.failed)
+        thread.started.connect(worker.run)
+        thread.finished.connect(app.quit)
+        window._smoke_worker, window._smoke_thread = worker, thread
+        thread.start()
     return app.exec()
 
 
