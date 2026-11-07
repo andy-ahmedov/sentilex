@@ -3,14 +3,6 @@ FROM python:3.10-slim-bullseye
 
 WORKDIR /app
 
-# Устанавливаем системные зависимости (включая git и gcc для некоторых библиотек)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    pkg-config \
-    python3-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 # Обновляем pip
 RUN pip install --upgrade pip
 

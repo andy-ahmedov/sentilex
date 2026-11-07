@@ -1,0 +1,12 @@
+# Only web runtime sources belong in the image.
+**
+!app.py
+!requirements.txt
+!scripts/
+!scripts/**
+!templates/
+!templates/**
+!static/
+!static/**
+**/__pycache__/
+**/*.py[cod]
