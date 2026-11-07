@@ -138,3 +138,5 @@ For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
 - Desktop numeric chunk input accepts 1…sentence_count and inserts exact values into the file-derived slider choices. Verify two-way synchronization with smoke_chunk_slider.py. Chapter-label stride is ordinal (1, 1+N, …), defaults to 1, preserves chapter boundaries and TXT; export mirrors it through CHAPTER_LABEL_STEP.
 
 - `.venv/bin/python desktop/smoke_plot_options.py` validates dense chapter labels, full plot legend and exported default chapter stride without changing metrics.
+
+- NRC fill rendering: `.venv/bin/python desktop/smoke_emotion_fills.py` checks curve clipping, solid palette, vertical ties and chunk boundaries.

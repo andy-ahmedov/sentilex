@@ -11,10 +11,11 @@ import numpy as np
 from scipy.ndimage import uniform_filter1d
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+from matplotlib.colors import LinearSegmentedColormap
 
 KEYS = ('anger', 'anticipation', 'disgust', 'fear', 'joy', 'sadness', 'surprise', 'trust')
 LABELS = ('Гнев', 'Ожидание', 'Отвращение', 'Страх', 'Радость', 'Грусть', 'Удивление', 'Доверие')
-COLORS = ('#e15759', '#f28e2b', '#79706e', '#b07aa1', '#edc948', '#4e79a7', '#76b7b2', '#59a14f')
+COLORS = ('#ee8585', '#ffc477', '#df8ad0', '#ad88d4', '#fff080', '#91c4f2', '#8de2e2', '#b3e580')
 TOKEN = re.compile(r'[^\W\d_]+', re.UNICODE)
 
 
@@ -102,6 +103,37 @@ def summarize(chunks):
     return dict(totals=totals, marker_shares=[v / associations if associations else 0 for v in totals], text_shares=[v / n if n else 0 for v in shares], unknown_share=unknown / n if n else 0)
 
 
+def draw_emotion_chunks(ax, chunks, smoothed):
+    """Fill [-1, smoothed tone] within each chunk; tie colors run bottom to top."""
+    x = np.arange(1, len(smoothed) + 1)
+    for chunk in chunks:
+        left, right = chunk['start'] - .5, chunk['end'] + .5
+        local_x = np.r_[left, x[(x > left) & (x < right)], right]
+        top = np.interp(local_x, x, smoothed)
+        leaders = chunk['leaders']
+        if not leaders:
+            ax.fill_between(local_x, -1, top, facecolor='#eeeeee',
+                            hatch='///', edgecolor='#999999', linewidth=0,
+                            zorder=1)
+        elif len(leaders) == 1:
+            ax.fill_between(local_x, -1, top, color=COLORS[leaders[0]],
+                            linewidth=0, zorder=1)
+        else:
+            # Clip an opaque gradient to the same polygon as a solid fill.
+            region = ax.fill_between(local_x, -1, top, facecolor='none',
+                                     linewidth=0, zorder=1)
+            cmap = LinearSegmentedColormap.from_list(
+                'tied_emotions', [COLORS[i] for i in leaders], N=256)
+            image = ax.imshow(np.linspace(0, 1, 256).reshape(-1, 1),
+                              extent=(left, right, -1, max(float(max(top)), -.999999)),
+                              origin='lower', aspect='auto', cmap=cmap,
+                              interpolation='bilinear', zorder=1)
+            image.set_clip_path(region.get_paths()[0], ax.transData)
+        ax.axvline(left, color='#777777', linewidth=.5, zorder=2)
+    if chunks:
+        ax.axvline(chunks[-1]['end'] + .5, color='#777777', linewidth=.5, zorder=2)
+
+
 def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix):
     chunks = count_chunks(sentences, chunk_size, lexicon, morph)
     summary = summarize(chunks)
@@ -119,25 +151,28 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
     Path(paths['txt']).write_text('\n'.join(lines), encoding='utf-8')
     fig, ax = plt.subplots(figsize=(14, 8))
     try:
-        for c in chunks:
-            leaders = c['leaders']
-            for band, i in enumerate(leaders):
-                ax.axvspan(c['start'] - .5, c['end'] + .5, ymin=band / len(leaders), ymax=(band + 1) / len(leaders), color=COLORS[i], alpha=.24)
-            if not leaders:
-                ax.axvspan(c['start'] - .5, c['end'] + .5, facecolor='#eeeeee', hatch='///', edgecolor='#999999', alpha=.4)
-            ax.axvline(c['start'] - .5, color='black', linewidth=.6)
-        if chunks:
-            ax.axvline(chunks[-1]['end'] + .5, color='black', linewidth=.6)
         x = range(1, len(sentiments) + 1)
-        ax.plot(x, sentiments, color='blue', linewidth=.5, label='RuSentiLex')
+        ax.set_facecolor('#f5f5f5')
+        ax.plot(x, sentiments, color='blue', linewidth=.7, label='RuSentiLex — тональность фрагментов', zorder=3)
         if len(sentiments):
-            ax.plot(x, uniform_filter1d(np.asarray(sentiments, dtype=float), 2 * chunk_size + 1), color='black', linewidth=1.5, label='Скользящее среднее')
+            smoothed = uniform_filter1d(np.asarray(sentiments, dtype=float), 2 * chunk_size + 1)
+            draw_emotion_chunks(ax, chunks, smoothed)
+            ax.plot(np.r_[.5, x, len(sentiments) + .5],
+                    np.r_[smoothed[0], smoothed, smoothed[-1]],
+                    color='black', linewidth=2,
+                    label='Скользящее среднее тональности', zorder=4)
+            ax.set_xlim(.5, len(sentiments) + .5)
+        ax.set_ylim(-1, 1)
         ax.set(title=f'Тональность и ведущие эмоции NRC; фрагмент {chunk_size} предложений', xlabel='Номер предложения', ylabel='Тональность [-1; 1]')
         handles, labels = ax.get_legend_handles_labels()
         handles += [Patch(facecolor=color, label=name) for color, name in zip(COLORS, LABELS)]
         handles.append(Patch(facecolor='#eeeeee', hatch='///', label='Маркеры не найдены'))
-        ax.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, -.13), ncol=4)
-        fig.subplots_adjust(bottom=.28)
+        ax.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, -.16), ncol=4)
+        fig.text(.5, .055,
+                 f'Чёрная линия — скользящее среднее тональности, окно {2 * chunk_size + 1} предложений.\n'
+                 'Заливка — ведущие эмоции фрагмента; градиент — равные лидеры (снизу вверх в порядке легенды).',
+                 ha='center', fontsize=9)
+        fig.subplots_adjust(bottom=.33)
         fig.savefig(paths['png'], bbox_inches='tight')
     finally:
         plt.close(fig)
