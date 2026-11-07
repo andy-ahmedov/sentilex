@@ -8,7 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QFile, QObject, QEvent, QTimer, Qt, QThread, QUrl, Signal, Slot
+from PySide6.QtCore import QFile, QObject, QEvent, QTimer, Qt, QThread, QUrl, Signal, Slot, QSettings
 from PySide6.QtGui import QDesktopServices, QPixmap, QTextCursor
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
+    QTabWidget,
+    QWidget,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -98,11 +100,12 @@ import app as web_app  # noqa: E402
 
 
 class AnalysisWorker(QObject):
-    finished = Signal(str, str, str)
+    finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, file_path: Path, chunk_size: int) -> None:
+    def __init__(self, file_path: Path, chunk_size: int, emotion_path=None) -> None:
         super().__init__()
+        self.emotion_path = emotion_path
         self.file_path = file_path
         self.chunk_size = chunk_size
 
@@ -115,6 +118,7 @@ class AnalysisWorker(QObject):
                 filename,
                 self.chunk_size,
                 export_script_file=True,
+                include_analysis_data=bool(self.emotion_path),
             )
 
             result_txt = Path(artifacts["result_txt"])
@@ -124,7 +128,15 @@ class AnalysisWorker(QObject):
             if not result_txt.exists() or not result_png.exists() or not result_py.exists():
                 raise FileNotFoundError("Файлы результатов не были созданы")
 
-            self.finished.emit(str(result_txt), str(result_png), str(result_py))
+            if self.emotion_path:
+                from scripts import emotions
+                lexicon, digest = emotions.load_lexicon(self.emotion_path, web_app.functions.morph_vocab)
+                data = artifacts.pop("analysis_data")
+                artifacts["emotions"] = emotions.write_results(
+                    data["sentences"], data["sentiments"], self.chunk_size, lexicon,
+                    digest, web_app.functions.morph_vocab, result_txt.parent / filename,
+                )
+            self.finished.emit(artifacts)
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(str(exc))
 
@@ -174,6 +186,33 @@ class MainWindowController(QObject):
         self.allowed_chunk_sizes: list[int] = []
         self.selected_sentence_count = 0
 
+        self.settings = QSettings("Sentilex", "Sentilex")
+        self.emotion_path = self.settings.value("nrc_path", "")
+        self.emotion_results = {}
+        self.nrc_button = QPushButton("Подключить NRC EmoLex ZIP / XLSX")
+        self.nrc_button.clicked.connect(self.choose_emotion_lexicon)
+        self.control_panel.layout().addWidget(self.nrc_button)
+        self.nrc_status = QLabel("NRC: " + (Path(self.emotion_path).name if self.emotion_path else "не подключён"))
+        self.nrc_status.setWordWrap(True)
+        self.nrc_status.setToolTip("NRC EmoLex 0.92 — Saif M. Mohammad, Peter D. Turney; NRC Canada. Автоматический русский перевод 2017. https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
+        self.control_panel.layout().addWidget(self.nrc_status)
+        self.plot_tabs = QTabWidget()
+        index = self.results_splitter.indexOf(self.plot_preview)
+        self.plot_preview.setParent(None)
+        self.plot_tabs.addTab(self.plot_preview, "Тональность")
+        emotion_page = QWidget()
+        emotion_layout = QVBoxLayout(emotion_page)
+        self.emotion_preview = QLabel("Подключите NRC для анализа эмоций")
+        self.emotion_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.emotion_preview.setMinimumSize(100, 100)
+        self.emotion_preview.installEventFilter(self)
+        emotion_layout.addWidget(self.emotion_preview, 1)
+        for kind in ("png", "txt", "csv"):
+            button = QPushButton("Сохранить эмоции " + kind.upper())
+            button.clicked.connect(lambda checked=False, k=kind: self.save_emotion_result(k))
+            emotion_layout.addWidget(button)
+        self.plot_tabs.addTab(emotion_page, "Эмоции")
+        self.results_splitter.insertWidget(index, self.plot_tabs)
         self.window.installEventFilter(self)
         self.upload_box.setCursor(self.browse_button.cursor())
         self.upload_box.installEventFilter(self)
@@ -247,6 +286,9 @@ class MainWindowController(QObject):
         self.current_layout_mode = next_mode
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        from shiboken6 import isValid
+        if not isValid(self.window):
+            return False
         if watched is self.window and event.type() == QEvent.Resize:
             self._apply_responsive_layout()
         if watched is self.upload_box and event.type() == QEvent.MouseButtonRelease:
@@ -254,6 +296,12 @@ class MainWindowController(QObject):
                 return True
             self.choose_file()
             return True
+        if watched is self.emotion_preview:
+            if event.type() == QEvent.Resize:
+                self.refresh_emotion_preview()
+            if event.type() == QEvent.MouseButtonRelease and self.emotion_results:
+                self.open_plot_preview(Path(self.emotion_results["png"]))
+                return True
         if watched is self.plot_preview:
             if event.type() == QEvent.MouseButtonRelease:
                 self.open_plot_preview()
@@ -427,6 +475,9 @@ class MainWindowController(QObject):
             QMessageBox.warning(self.window, "Нет файла", "Сначала выберите .txt файл")
             return
 
+        self.emotion_results = {}
+        self.emotion_preview.clear()
+        self.emotion_preview.setText("Идёт анализ эмоций..." if self.emotion_path else "NRC не подключён")
         self.current_result_txt = None
         self.current_result_png = None
         self.current_result_py = None
@@ -443,9 +494,14 @@ class MainWindowController(QObject):
             self._set_error_state("Недоступен размер фрагмента")
             return
 
+        if self.emotion_path and not Path(self.emotion_path).is_file():
+            QMessageBox.warning(self.window, "NRC недоступен", "Словарь перемещён или удалён. Выполняется только анализ тональности; подключите NRC повторно.")
+            self.emotion_path = ""
+            self.settings.remove("nrc_path")
+            self.nrc_status.setText("NRC: не подключён")
         chunk_size = self.allowed_chunk_sizes[self.chunk_slider.value()]
         self.thread = QThread(self.window)
-        self.worker = AnalysisWorker(self.selected_file, chunk_size)
+        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.emotion_path or None)
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -498,8 +554,11 @@ class MainWindowController(QObject):
         self.plot_preview.setPixmap(scaled)
         self.plot_preview.setText("")
 
-    @Slot(str, str, str)
-    def on_analysis_finished(self, txt_path: str, png_path: str, py_path: str) -> None:
+    @Slot(dict)
+    def on_analysis_finished(self, artifacts) -> None:
+        txt_path, png_path, py_path = (artifacts[k] for k in ("result_txt", "result_png", "result_py"))
+        self.emotion_results = artifacts.get("emotions", {})
+        self.refresh_emotion_preview()
         try:
             self.current_result_txt = Path(txt_path)
             self.current_result_png = Path(png_path)
@@ -517,6 +576,9 @@ class MainWindowController(QObject):
 
     @Slot(str)
     def on_analysis_failed(self, message: str) -> None:
+        self.emotion_results = {}
+        self.emotion_preview.clear()
+        self.emotion_preview.setText("Ошибка анализа эмоций")
         self.current_result_txt = None
         self.current_result_png = None
         self.current_result_py = None
@@ -565,18 +627,19 @@ class MainWindowController(QObject):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(results_dir)))
 
     @Slot()
-    def open_plot_preview(self) -> None:
-        if self.current_result_png is None or not self.current_result_png.exists():
+    def open_plot_preview(self, image_path=None) -> None:
+        image_path = image_path or self.current_result_png
+        if image_path is None or not image_path.exists():
             return
 
         try:
-            pixmap = self._load_png_pixmap(self.current_result_png)
+            pixmap = self._load_png_pixmap(image_path)
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self.window, "График недоступен", str(exc))
             return
 
         dialog = QDialog(self.window)
-        dialog.setWindowTitle(f"График тональности: {self.current_result_png.name}")
+        dialog.setWindowTitle(f"График: {image_path.name}")
         screen = self.window.screen() or QApplication.primaryScreen()
         if screen is not None:
             available = screen.availableGeometry()
@@ -594,6 +657,28 @@ class MainWindowController(QObject):
         layout.addWidget(scroll_area)
 
         dialog.exec()
+
+    def choose_emotion_lexicon(self):
+        if self.analysis_in_progress:
+            return
+        path, _ = QFileDialog.getOpenFileName(self.window, "NRC EmoLex (официальный архив или таблица)", "", "NRC (*.zip *.xlsx)")
+        if path:
+            self.emotion_path = path
+            self.settings.setValue("nrc_path", path)
+            self.nrc_status.setText("NRC: " + Path(path).name)
+            self.nrc_status.setToolTip("NRC EmoLex — Saif M. Mohammad, Peter D. Turney; NRC Canada. Русский перевод 2017. https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
+
+    def save_emotion_result(self, kind):
+        if self.emotion_results and not self.analysis_in_progress:
+            self._save_result_copy(Path(self.emotion_results[kind]), f"{kind.upper()} (*.{kind})")
+
+    def refresh_emotion_preview(self):
+        if not self.emotion_results:
+            self.emotion_preview.clear()
+            self.emotion_preview.setText("Подключите NRC для анализа эмоций")
+        if self.emotion_results:
+            pixmap = self._load_png_pixmap(Path(self.emotion_results["png"]))
+            self.emotion_preview.setPixmap(pixmap.scaled(self.emotion_preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
     @Slot()
     def shutdown(self) -> None:

@@ -358,6 +358,6 @@ When implementation is complete, summarize:
 
 Approved: external NRC ZIP/XLSX, eight categories, same chunks, exact ties as equal color bands, separate emotion PNG/TXT/CSV, marker and sentence-weighted shares. No negation/context inference. Original sentiment outputs and PY remain unchanged. Windows onefile and all affected smoke checks required.
 
-Progress: [ ] engine/import/reports; [ ] desktop integration; [ ] Windows build and verification.
+Progress: [x] engine/import/reports; [x] desktop integration; [ ] Windows build and verification.
 
 Decisions: openpyxl desktop-only; external path in QSettings; translated duplicate lemmas union categories; longest phrase match; zero markers distinct from neutrality.
