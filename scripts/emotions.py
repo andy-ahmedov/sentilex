@@ -1,8 +1,8 @@
 """Optional desktop NRC EmoLex analysis; dictionary data stays external."""
 import csv
 import hashlib
+from html import escape
 import io
-import json
 from pathlib import Path
 import re
 import zipfile
@@ -66,9 +66,14 @@ def count_chunks(sentences, chunk_size, lexicon, morph):
     cache, chunks = {}, []
     lengths = sorted({len(k) for k in lexicon}, reverse=True)
     for start in range(0, len(sentences), chunk_size):
-        counts, words = [0] * 8, 0
-        for sentence in sentences[start:start + chunk_size]:
+        counts, words, details = [0] * 8, 0, []
+        for number, sentence in enumerate(sentences[start:start + chunk_size], start + 1):
             seq = tokens(sentence, morph, cache)
+            # Track original character positions through lower-case expansion.
+            positions = [i for i, char in enumerate(sentence)
+                         for _ in char.lower()]
+            spans = list(TOKEN.finditer(sentence.lower().replace('ё', 'е')))
+            sentence_counts, markers = [0] * 8, []
             words += len(seq)
             pos = 0
             while pos < len(seq):
@@ -76,16 +81,85 @@ def count_chunks(sentences, chunk_size, lexicon, morph):
                     categories = lexicon.get(tuple(seq[pos:pos + size]))
                     if categories and pos + size <= len(seq):
                         for category in categories:
-                            counts[category] += 1
+                            sentence_counts[category] += 1
+                        left = positions[spans[pos].start()]
+                        right = positions[spans[pos + size - 1].end() - 1] + 1
+                        markers.append(dict(start=left, end=right,
+                                            text=sentence[left:right],
+                                            lemma=' '.join(seq[pos:pos + size]),
+                                            categories=sorted(categories)))
                         pos += size
                         break
                 else:
                     pos += 1
+            counts = [a + b for a, b in zip(counts, sentence_counts)]
+            details.append(dict(number=number, text=sentence, markers=markers,
+                                counts=sentence_counts,
+                                leaders=find_leaders(sentence_counts)))
         end = min(start + chunk_size, len(sentences))
-        maximum = max(counts)
-        leaders = [i for i, n in enumerate(counts) if n == maximum] if maximum else []
-        chunks.append(dict(start=start + 1, end=end, words=words, counts=counts, leaders=leaders))
+        chunks.append(dict(start=start + 1, end=end, words=words, counts=counts,
+                           leaders=find_leaders(counts), sentences=details))
     return chunks
+
+
+def find_leaders(counts):
+    maximum = max(counts)
+    return [i for i, value in enumerate(counts) if value == maximum] if maximum else []
+
+
+def leader_names(leaders):
+    return ' / '.join(LABELS[i] for i in leaders) or 'Маркеры не найдены'
+
+
+def count_description(counts):
+    return '; '.join(f'{label}: {value}' for label, value in zip(LABELS, counts))
+
+
+def marker_description(marker):
+    return (f'«{marker["text"]}» [{marker["lemma"]}] → '
+            + leader_names(marker['categories']))
+
+
+def sentence_report(chunks):
+    """Return TXT and escaped, offline HTML from the actual counting trace."""
+    intro = ('Лидеры предложения и фрагмента рассчитываются отдельно. '
+             'Маркеры не найдены — нет словарных совпадений, а не доказанное отсутствие эмоций. '
+             'Показан текст после предобработки; контекст и отрицания не интерпретируются.')
+    lines = ['Маркеры кластеров по предложениям', intro]
+    body = ['<h1>Эмоциональные кластеры — маркеры</h1>', f'<p>{escape(intro)}</p>']
+    for number, chunk in enumerate(chunks, 1):
+        title = f'Фрагмент {number}: предложения {chunk["start"]}–{chunk["end"]}'
+        leaders = 'Лидеры фрагмента: ' + leader_names(chunk['leaders'])
+        counts = count_description(chunk['counts'])
+        lines.extend(['', title, leaders, counts])
+        body.extend([f'<h2>{escape(title)}</h2>', f'<p><b>{escape(leaders)}</b><br>{escape(counts)}</p>'])
+        for sentence in chunk['sentences']:
+            heading = f'Предложение {sentence["number"]}'
+            label = 'Лидеры предложения: ' + leader_names(sentence['leaders'])
+            lines.extend([heading + ': ' + sentence['text'], label,
+                          count_description(sentence['counts'])])
+            highlighted, pos = [], 0
+            for marker in sentence['markers']:
+                highlighted.extend([escape(sentence['text'][pos:marker['start']]),
+                                    '<span style="background-color:#fff1b8; color:#222222">',
+                                    escape(sentence['text'][marker['start']:marker['end']]), '</span>'])
+                pos = marker['end']
+            highlighted.append(escape(sentence['text'][pos:]))
+            body.extend([f'<h3>{heading}</h3>', '<p>' + ''.join(highlighted) + '</p>',
+                         f'<p><b>{escape(label)}</b><br>{escape(count_description(sentence["counts"]))}</p>'])
+            descriptions = [marker_description(m) for m in sentence['markers']]
+            if descriptions:
+                lines.extend('  Маркер: ' + d for d in descriptions)
+                body.append('<ul>' + ''.join(f'<li>{escape(d)}</li>' for d in descriptions) + '</ul>')
+            else:
+                lines.append('  Маркеры не найдены')
+                body.append('<p>Маркеры не найдены</p>')
+    html = ('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
+            '<title>Эмоциональные кластеры — маркеры</title>'
+            '<style>body {font-family:sans-serif; color:#222; background:#fff; margin:24px;} '
+            'h2 {color:#483d65;} p,li {line-height:1.5;}</style></head><body>'
+            + ''.join(body) + '</body></html>')
+    return '\n'.join(lines), html
 
 
 def summarize(chunks):
@@ -137,7 +211,7 @@ def draw_emotion_chunks(ax, chunks, smoothed):
 def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix):
     chunks = count_chunks(sentences, chunk_size, lexicon, morph)
     summary = summarize(chunks)
-    paths = {k: str(prefix) + '_emotions.' + k for k in ('png', 'txt', 'csv')}
+    paths = {k: str(prefix) + '_emotions.' + k for k in ('png', 'txt', 'csv', 'html')}
     with open(paths['csv'], 'w', encoding='utf-8-sig', newline='') as f:
         writer = csv.writer(f, delimiter=';')
         writer.writerow(['Фрагмент', 'Начало', 'Конец', 'Предложений', 'Слов'] + list(LABELS) + ['Лидеры'])
@@ -148,6 +222,11 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
         lines.append(f'{name}: {summary["totals"][i]}; доля маркеров {summary["marker_shares"][i]:.2%}; доля текста {summary["text_shares"][i]:.2%}')
     lines.append(f'Текст без маркеров: {summary["unknown_share"]:.2%}')
     lines.extend(['', 'Подсчёты по фрагментам:', Path(paths['csv']).read_text(encoding='utf-8-sig')])
+    details, html = sentence_report(chunks)
+    metadata = '<p>' + '<br>'.join(escape(line) for line in lines[:18]) + '</p>'
+    html = html.replace('<body>', '<body>' + metadata, 1)
+    lines.extend(['', details])
+    Path(paths['html']).write_text(html, encoding='utf-8')
     Path(paths['txt']).write_text('\n'.join(lines), encoding='utf-8')
     fig, ax = plt.subplots(figsize=(14, 8))
     try:

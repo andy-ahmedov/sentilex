@@ -375,3 +375,22 @@ Approved: fill each existing emotion chunk only from y=-1 to the unchanged smoot
 Progress: curve-clipped fills, matching palette and gradients implemented. Rendered pixel checks, NRC counts/import, real Chapter_7_Karenina.txt (94 sentences, chunk 3) and offscreen GUI passed; real chapter image inspected. Full GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify passed with unchanged golden. Windows onefile rebuilt successfully; tools/smoke_frozen.ps1 -NrcPath <external ZIP> -ReportName frozen-curve-fills passed on the actual exe, including worker/UI, NRC artifacts and unchanged tone golden. Windows screenshot inspected. Synthetic TXT/CSV also match the previous renderer byte for byte. Outcome: requested rendering complete; scoring and report contracts preserved.
 Decision: fixed tone axis [-1, 1], deterministic category order for vertical gradients; no interpolation between neighboring chunks or change of smoothing algorithm.
 Validation: synthetic clipping/colors/ties/unknown checks, Chapter_7_Karenina.txt render, emotion GUI smoke, full verify, Windows build and frozen NRC smoke.
+
+## Explainable emotional clusters (approved follow-up)
+
+Purpose: preserve NRC counts and tone while making ties readable and exposing the exact marker occurrences behind sentence and chunk leaders. User chose retained gradients plus explicit pure-color designations.
+
+Implementation source of truth:
+- Extend the existing marker traversal with original sentence offsets, lemma sequences and category labels; aggregate chunks from sentence counts. Keep longest/non-overlapping matching, duplicate normalization, ties and shares unchanged.
+- Add escaped offline HTML (`html` path beside png/txt/csv), sentence details appended to NRC TXT, and a QTextBrowser tab "Маркеры кластеров". Explain sentence leaders separately from chunk leaders. Clear details on new run, failure and tone-only analysis.
+- Keep gradients under the curve; add an aligned eight-row leader matrix with named rows, opaque category colors and hatched unknown columns. Remove smoothing-window text from PNG but preserve the curve and its legend explanation.
+- Slider initially offers 1..10, then tens and final sentence count; retain defaults and numeric arbitrary input. Rename user-facing NRC feature "Эмоциональные кластеры" while preserving technical names and keeping original tonal phases named "Эмоциональные фазы".
+- Update README, NRC guide, overview, AGENTS and change logs. After implementation validation, write a standalone 4–6 paragraph popular-science article description in docs/article_emotional_clusters.md without modifying existing article material.
+
+Progress: [x] marker/report engine; [ ] GUI and plot/slider; [ ] final verification and Windows exe; [ ] documentation/article and push.
+Surprises & Discoveries: the displayed minimum 3 came from manually inserting 3 in a slider originally starting at 10; numeric input already allowed 1. Existing GUI tests assume exactly three artifacts and must now expect HTML too.
+Decision Log: the color designation is an eight-row matrix sharing the sentence X axis; each row has its emotion name, and every tied leader is filled. HTML is escaped and self-contained, no external resources/scripts. TXT summary and CSV columns stay stable except user-facing NRC naming; append sentence details to TXT. Internal file names/settings and original tone output remain compatible.
+Validation: NRC fixtures (ties/none/phrases/repeats/multi-labels), previous-count parity, HTML escaping and offsets, GUI refresh/clear, chunk 1/2/3 and empty controls, matrix render including dense inputs, actual Chapter_7_Karenina.txt, layout; full GOLDEN_HTTP_MODE=container DOCKER_BUILDKIT=0 make verify; sequential export/reanalysis checks; rebuild Windows onefile and test frozen with/without NRC. Commit per logical block and push main after checks. External NRC and build artifacts stay untracked/ignored.
+Outcomes & Retrospective: pending.
+
+Marker milestone: smoke_emotions passed with real 3837-entry archive and synthetic offset, count aggregation, repetition, phrase, multi-label, tie, unknown and escaped HTML fixtures. Integration checks pending.
