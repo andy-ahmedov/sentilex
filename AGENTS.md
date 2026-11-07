@@ -124,3 +124,7 @@ For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
 - keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current;
 - if the real repository differs from the plan, update `/PLANS.md` first, then continue implementation;
 - run the validation commands specified in `/PLANS.md` after each milestone.
+
+## NRC desktop emotions
+- External NRC ZIP/XLSX must never be committed, bundled or embedded into exported PY. Ignore NRC archives and Windows build artifacts.
+- Run `.venv/bin/python desktop/smoke_emotions.py` for marker counts, ties, shares and external archive import. Desktop requires openpyxl from desktop/requirements.txt.

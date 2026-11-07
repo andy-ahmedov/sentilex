@@ -171,7 +171,7 @@ def upload_file():
     return render_dashboard(default_chunk_size=default_chunk_size, result=LAST_RESULT)
 
 
-def process_text(file_path, filename, chunk_size, export_script_file=False):
+def process_text(file_path, filename, chunk_size, export_script_file=False, include_analysis_data=False):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -214,6 +214,9 @@ def process_text(file_path, filename, chunk_size, export_script_file=False):
         **distribution,
         **plot_metrics,
     }
+
+    if include_analysis_data:
+        artifacts["analysis_data"] = {"sentences": sentences, "sentiments": sentiments}
 
     if export_script_file:
         script_path = os.path.join(app.config["RESULT_FOLDER"], f"{filename}_analysis_code.py")

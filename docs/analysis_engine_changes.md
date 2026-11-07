@@ -274,3 +274,7 @@ Validation:
 - `make verify`: pass/fail or not run with reason.
 - Other relevant checks: pass/fail or not run with reason.
 ```
+
+## 2026-11-07 - Optional desktop NRC emotions
+
+Added scripts/emotions.py: external ZIP/XLSX import, normalized Russian marker matching, per-chunk counts, ties, marker shares and sentence-weighted shares, separate PNG/TXT/CSV. Existing tone scoring and formats remain unchanged. app.process_text optionally returns analysis_data for desktop without recalculating sentiment. openpyxl is desktop-only. No NRC data is bundled. Validation: desktop/smoke_emotions.py covers counts, ties, phrases, missing markers, shares and real archive import; full integration follows.
