@@ -6,6 +6,20 @@ changes how input text is processed, measured, plotted, exported, or written to 
 
 The goal is to make engine changes understandable without reading Python code.
 
+## 2026-11-08 - NRC EmoLex Russian 2022 local research build
+
+Files/functions: scripts/emotions.py (normalize_entries/load_lexicon, source_metadata, report/plot labels and summarize), desktop main/spec/build metadata, smoke checks, tools/prepare_nrc2022.py, Windows build/frozen helpers, .gitignore/.dockerignore and NRC2022 source metadata.
+
+Before: bundled RusEmoLex, 1024 rows / 999 normalized keys, five-category vectors, five-row matrix/curves. Source occurrence counts were not used as weights.
+
+After: pinned original Russian-NRC-EmoLex.txt from the author's 2022 ZIP, SHA256 96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a. The Russian table has 14154 rows; filtering emotional entries and uniting normalized Russian translations yields 3707 keys. Eight categories: anger/sadness/joy/fear/surprise/anticipation/disgust/trust. Existing five colors/indices retained, three added; all vectors/CSV fields/curves/matrix rows now have eight categories. Binary labels count once per occurrence per category; positive/negative metadata is not used for RuSentiLex. Reports/UI identify manual English annotation versus automatic Russian Google Translate (August 2022). Original Russian TXT/README stay Git-ignored and outside Docker, packaged only in the local research exe SentiSoft-NRC2022.exe; a pinned preparer enables local setup. Previous exe/resources retained. No startup download/openpyxl required.
+
+Why / impact: user requested testing NRC 2022 instead of RusEmoLex for a local conference research copy, with no distribution. Category counts/report columns intentionally change; original longest-match/non-overlap/normalization union/repeats, density denominator/units, leader ties, chunk default 1 and six output filename bases stay. RuSentiLex scoring, preprocessing, tone chunk arithmetic/phases/TXT/PNG and standalone PY remain unchanged. A pre-existing fixed-eight share allocation was made category-count-dependent. No hidden lexical correction or literary calibration was introduced.
+
+Validation: pinned 14154-row source / eight classes / 3707 keys, real multi-label examples, duplicate union, missing/tampered resource rejection, synthetic phrase/repetition/tie/zero/unequal-length densities and aggregate consistency, eight-field CSV vectors, HTML escaping and two PNG/stair geometry passed; all eight palette/matrix/fill checks passed. Offscreen startup/keyboard slider/layout and actual QThread GUI passed with six-file save, rerun/error cleanup, chapter 1/2/3 and dense input. Sequential standalone export/reanalysis, plot options and full container HTTP verify passed with unchanged tone golden. Windows build/frozen offline worker/UI passed with pinned TXT/README/source, eight categories and six outputs. Archive inspection confirmed active NRC only. Docker/Git privacy checks and final release details are recorded in PLANS.md.
+
+Known data limitation: original wot→что is labeled trust. On local Karenina.txt (20672 sentences) it creates 6393 matches; all 20 chunks at size 1050 select trust. This version exposes the raw method, not a claim of improved literary accuracy.
+
 ## 2026-11-08 - Built-in RusEmoLex and word-normalized emotion density
 
 Files/functions: `scripts/emotions.py` (load_lexicon, normalize_entries, count_chunks, sentence_report, write_results, draw_density, draw_leader_matrix), `scripts/data/*`; desktop worker/controller/UI, dependency manifest and packaging/smoke helpers.

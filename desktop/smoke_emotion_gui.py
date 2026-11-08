@@ -51,17 +51,17 @@ def analyze(size):
 
 
 try:
-    assert 'RusEmoLex' in window.windowTitle()
+    assert 'NRC2022' in window.windowTitle()
     assert not hasattr(controller, 'emotion_path') and not hasattr(controller, 'nrc_button')
     assert not controller.chunk_number.isEnabled() and not controller.chunk_slider.isEnabled()
-    window.grab().save('/tmp/sentilex-rusemolex-start.png')
+    window.grab().save('/tmp/sentilex-nrc2022-start.png')
     with tempfile.TemporaryDirectory() as folder:
-        source = Path(folder) / 'rusemolex_gui.txt'
-        source.write_text('Я испугался. Радость и счастье. Стол и окно.', encoding='utf-8')
+        source = Path(folder) / 'nrc2022_gui.txt'
+        source.write_text('Я боюсь. Радость и счастье. Стол и окно.', encoding='utf-8')
         choose(source)
         analyze(1)
         assert len(controller.emotion_results) == 6
-        assert 'Найдено: «испугался» → Страх' in controller.emotion_report.toPlainText()
+        assert 'Найдено: «боюсь» → Страх' in controller.emotion_report.toPlainText()
         assert 'В этом предложении не найдены слова из словаря' in controller.emotion_report.toPlainText()
         assert all(b.isEnabled() for b in controller.emotion_save_buttons.values())
         for kind, button in controller.emotion_save_buttons.items():
@@ -75,9 +75,11 @@ try:
             app.processEvents()
             controller.content_scroll_area.verticalScrollBar().setValue(controller.content_scroll_area.verticalScrollBar().maximum())
             app.processEvents()
-            window.grab().save(f'/tmp/sentilex-rusemolex-{name}-gui.png')
+            window.grab().save(f'/tmp/sentilex-nrc2022-{name}-gui.png')
         assert not controller.emotion_preview.pixmap().isNull()
         assert not controller.density_preview.pixmap().isNull()
+        assert 'Google Translate, август 2022' in controller.emotion_report.toPlainText()
+        assert 'Доверие' in controller.emotion_report.toPlainText()
         first = {k: Path(p).stat().st_mtime_ns for k, p in controller.emotion_results.items()}
         analyze(2)
         assert len(controller.emotion_results) == 6
@@ -110,15 +112,15 @@ try:
             for index, name in ((1, 'chapter-clusters'), (2, 'chapter-density'), (3, 'chapter-markers')):
                 controller.plot_tabs.setCurrentIndex(index)
                 app.processEvents()
-                window.grab().save(f'/tmp/sentilex-rusemolex-{name}-gui.png')
-        dense = Path(folder) / 'rusemolex_dense.txt'
+                window.grab().save(f'/tmp/sentilex-nrc2022-{name}-gui.png')
+        dense = Path(folder) / 'nrc2022_dense.txt'
         dense.write_text(' '.join(['Злость грусть радость страх удивление.'] * 240), encoding='utf-8')
         choose(dense)
         analyze(1)
         assert controller.emotion_results
         controller.plot_tabs.setCurrentIndex(2)
         app.processEvents()
-        window.grab().save('/tmp/sentilex-rusemolex-dense-gui.png')
+        window.grab().save('/tmp/sentilex-nrc2022-dense-gui.png')
 finally:
     print("Closing GUI", flush=True)
     controller.shutdown()

@@ -1,0 +1,18 @@
+{
+  "name": "NRC Emotion Lexicon",
+  "version": "0.92",
+  "translation": "Russian; Google Translate; August 2022",
+  "authors": [
+    "Saif M. Mohammad",
+    "Peter D. Turney"
+  ],
+  "homepage": "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm",
+  "archive_url": "https://saifmohammad.com/WebDocs/Lexicons/NRC-Emotion-Lexicon.zip",
+  "archive_sha256": "4edcbd00b1d38ace19ecebca17a50ce08719785b9476cd12d31532eff0fc34e6",
+  "archive_member": "NRC-Emotion-Lexicon/OneFilePerLanguage/Russian-NRC-EmoLex.txt",
+  "sha256": "96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a",
+  "readme_sha256": "0b936e63cebece66081a29041d891a47f252dfb9fc872416a191e65403de4104",
+  "source_rows": 14154,
+  "publication": "https://doi.org/10.1111/j.1467-8640.2012.00460.x",
+  "research_build": true
+}

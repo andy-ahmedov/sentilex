@@ -1,6 +1,8 @@
-"""Desktop RusEmoLex markers and word-normalized emotion densities."""
+"""Desktop NRC EmoLex 2022 markers and word-normalized emotion densities."""
 import csv
 import hashlib
+import io
+import json
 from html import escape
 from pathlib import Path
 import re
@@ -12,14 +14,17 @@ from matplotlib.patches import Patch, Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import LinearSegmentedColormap
 
-KEYS = ('anger', 'sadness', 'joy', 'fear', 'surprise')
-LABELS = ('Злость', 'Грусть', 'Радость', 'Страх', 'Удивление')
-COLORS = ('#ee8585', '#91c4f2', '#fff080', '#ad88d4', '#8de2e2')
+# Preserve the five existing color/index assignments and add NRC's other classes.
+KEYS = ('anger', 'sadness', 'joy', 'fear', 'surprise', 'anticipation', 'disgust', 'trust')
+LABELS = ('Злость', 'Грусть', 'Радость', 'Страх', 'Удивление', 'Ожидание', 'Отвращение', 'Доверие')
+COLORS = ('#ee8585', '#91c4f2', '#fff080', '#ad88d4', '#8de2e2', '#ffc477', '#df8ad0', '#b3e580')
 DATA_DIR = Path(__file__).resolve().parent / 'data'
-SOURCE_COMMIT = 'b485f34def81f622295b28bd7e5558e3581a8a9e'
-SOURCE_URL = f'https://github.com/nl-pi/rusemolex/blob/{SOURCE_COMMIT}/RusEmoLex.csv'
-SOURCE_SHA256 = '46861144c5b04d5f139fcea87ecbc6164e20ae325a2607787414d1336cae8c55'
-PUBLICATION = 'https://doi.org/10.22363/2687-0088-44439'
+LEXICON_PATH = DATA_DIR / 'nrc2022' / 'Russian-NRC-EmoLex.txt'
+SOURCE_URL = 'https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm'
+SOURCE_SHA256 = '96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a'
+SOURCE_ROWS = 14154
+PUBLICATION = 'https://doi.org/10.1111/j.1467-8640.2012.00460.x'
+DICTIONARY_NAME = 'NRC EmoLex 2022'
 NO_MARKERS = 'Эмоциональные слова не найдены'
 TOKEN = re.compile(r'[^\W\d_]+', re.UNICODE)
 
@@ -34,25 +39,40 @@ def tokens(text, morph, cache):
 
 
 def normalize_entries(rows, morph):
-    """Union normalized classes; source occurrence counts are never weights."""
+    """Union binary emotion labels across normalized Russian translations."""
     lexicon, cache = {}, {}
     for row in rows:
-        category = LABELS.index(row['Класс'])
-        key = tuple(tokens(row['Слово'], morph, cache))
+        word = row['Russian Word']
+        categories = {i for i, key in enumerate(KEYS) if row[key] == '1'}
+        if not categories or not re.search('[а-яё]', word.lower()):
+            continue
+        key = tuple(tokens(word, morph, cache))
         if key:
-            lexicon.setdefault(key, set()).add(category)
+            lexicon.setdefault(key, set()).update(categories)
     return lexicon
 
 
 def load_lexicon(morph):
-    data = (DATA_DIR / 'RusEmoLex.csv').read_bytes()
+    try:
+        data = LEXICON_PATH.read_bytes()
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            'Не найден встроенный NRC EmoLex 2022. Для запуска из исходников '
+            'подготовьте локальный ресурс: python tools/prepare_nrc2022.py') from exc
     digest = hashlib.sha256(data).hexdigest()
     if digest != SOURCE_SHA256:
-        raise ValueError('Встроенный словарь RusEmoLex повреждён')
-    rows = list(csv.DictReader(data.decode('utf-8-sig').splitlines(), delimiter=';'))
-    if len(rows) != 1024 or {row['Класс'] for row in rows} != set(LABELS):
-        raise ValueError('Неверный состав встроенного словаря RusEmoLex')
+        raise ValueError('Встроенный словарь NRC EmoLex 2022 повреждён или имеет другую версию')
+    rows = list(csv.DictReader(io.StringIO(data.decode('utf-8-sig')), delimiter='\t'))
+    required = {'English Word', 'Russian Word', 'positive', 'negative', *KEYS}
+    if (len(rows) != SOURCE_ROWS or set(rows[0]) != required
+            or any(row[key] not in ('0', '1') for row in rows for key in KEYS)
+            or any(not any(row[key] == '1' for row in rows) for key in KEYS)):
+        raise ValueError('Неверный состав встроенного NRC EmoLex 2022')
     return normalize_entries(rows, morph), digest
+
+
+def source_metadata():
+    return json.loads((DATA_DIR / 'NRC2022.SOURCE.json').read_text(encoding='utf-8'))
 
 
 def densities(counts, words):
@@ -189,7 +209,7 @@ def summarize(chunks):
     totals = [sum(c['counts'][i] for c in chunks) for i in range(len(KEYS))]
     associations = sum(totals)
     n = sum(c['end'] - c['start'] + 1 for c in chunks)
-    shares, unknown = [0.] * 8, 0
+    shares, unknown = [0.] * len(KEYS), 0
     for c in chunks:
         length = c['end'] - c['start'] + 1
         if c['leaders']:
@@ -303,14 +323,18 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
                                 + sentence['counts'] + sentence['densities']
                                 + [leader_names(sentence['leaders']),
                                    '; '.join(marker_description(m, detailed=True) for m in sentence['markers'])])
-    lines = ['Эмоциональные кластеры RusEmoLex: злость, грусть, радость, страх, удивление',
-             'Ярошенко П.В., Лукашевич Н.В. RusEmoLex: эмоциональный лексикон для русского языка. '
-             'Russian Journal of Linguistics. 2025. 29(3). 659–687.', PUBLICATION, SOURCE_URL,
-             f'Коммит источника: {SOURCE_COMMIT}', f'SHA256 источника: {digest}',
+    lines = ['Эмоциональные кластеры NRC EmoLex 0.92; русский перевод 2022',
+             'Авторы: Saif M. Mohammad, Peter D. Turney; National Research Council Canada.',
+             'Английские эмоциональные метки: ручная краудсорсинговая разметка.',
+             'Русский перевод: Google Translate, август 2022; не ручная русская разметка.',
+             PUBLICATION, SOURCE_URL,
+             f'SHA256 русского источника: {digest}',
+             f'Записей в исходной русской таблице: {SOURCE_ROWS}',
              f'Размер фрагмента: {chunk_size}',
-             'Количество вхождений в источники не используется как вес.',
+             'Одно вхождение учитывается один раз в каждой связанной категории.',
              'Словосочетание — один маркер; все его слова входят в число слов.',
-             'Доли маркеров рассчитаны по сумме пяти счётчиков, а не по всем словам.',
+             'Метки positive/negative NRC не используются для расчёта тональности RuSentiLex.',
+             'Доли маркеров рассчитаны по сумме восьми счётчиков, а не по всем словам.',
              'Доли текста рассчитаны по предложениям; равные категории делят вклад поровну.', '']
     for i, name in enumerate(LABELS):
         lines.append(f'{name}: {summary["totals"][i]}; доля маркеров {summary["marker_shares"][i]:.2%}; доля текста {summary["text_shares"][i]:.2%}')
@@ -323,7 +347,7 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
     Path(paths['html']).write_text(html, encoding='utf-8')
     Path(paths['txt']).write_text(intro + '\n\n' + '\n'.join(lines) + '\n' + rest, encoding='utf-8')
     fig, (ax, matrix) = plt.subplots(2, 1, figsize=(14, 10), sharex=True,
-                                    gridspec_kw={'height_ratios': [4, 1.3], 'hspace': .18})
+                                    gridspec_kw={'height_ratios': [4, 1.8], 'hspace': .18})
     try:
         x = range(1, len(sentiments) + 1)
         ax.set_facecolor('#f5f5f5')
@@ -337,13 +361,13 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
                     label='Чёрная линия — сглаженная тональность', zorder=4)
             ax.set_xlim(.5, len(sentiments) + .5)
         ax.set_ylim(-1, 1)
-        ax.set(title=f'Тональность и эмоциональные кластеры RusEmoLex; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
+        ax.set(title=f'Тональность и эмоциональные кластеры NRC 2022; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
         ax.tick_params(axis='x', labelbottom=False)
         draw_leader_matrix(matrix, chunks)
         handles, labels = ax.get_legend_handles_labels()
         handles += [Patch(facecolor=color, label=name) for color, name in zip(COLORS, LABELS)]
         handles.append(Patch(facecolor='#eeeeee', hatch='///', label=NO_MARKERS))
-        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=3)
+        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=4)
         fig.text(.5, .035,
                  'Градиент — равные преобладающие эмоции. Названия показаны в матрице под кривой.\n'
                  'Штриховка — эмоциональные слова не найдены; границы фрагментов сохранены.',

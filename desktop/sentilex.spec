@@ -3,6 +3,7 @@
 from pathlib import Path
 import os
 import json
+import hashlib
 from datetime import datetime, timezone
 import tempfile
 import pymorphy2_dicts_ru
@@ -16,11 +17,21 @@ metadata_dir = Path(tempfile.mkdtemp(prefix="sentilex-build-info-"))
 build_info = metadata_dir / "build_info.json"
 build_info.write_text(json.dumps({
     "build_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-    "dictionary": "RusEmoLex", "edition": "RusEmoLex-density",
+    "dictionary": "NRC EmoLex 2022", "edition": "NRC2022-research-density",
 }), encoding="utf-8")
+source_metadata = json.loads((project_root / "scripts/data/NRC2022.SOURCE.json").read_text(encoding="utf-8"))
+source_dictionary = project_root / "scripts/data/nrc2022/Russian-NRC-EmoLex.txt"
+if not source_dictionary.is_file():
+    raise SystemExit("Prepare private research data first: python tools/prepare_nrc2022.py")
+if hashlib.sha256(source_dictionary.read_bytes()).hexdigest() != source_metadata["sha256"]:
+    raise SystemExit("NRC 2022 resource checksum mismatch")
 datas = [
     (str(build_info), "desktop"),
-    (str(project_root / "scripts" / "data"), "scripts/data"),
+    (str(source_dictionary), "scripts/data/nrc2022"),
+    (str(project_root / "scripts/data/nrc2022/README.txt"), "scripts/data/nrc2022"),
+    (str(project_root / "scripts/data/NRC2022.SOURCE.json"), "scripts/data"),
+    (str(project_root / "scripts/data/NRC2022.SOURCE.md"), "scripts/data"),
+    (str(project_root / "scripts/data/NRC2022.sha256"), "scripts/data"),
     (str(project_root / "desktop" / "ui" / "main.ui"), "desktop/ui"),
     (str(project_root / "desktop" / "style.qss"), "desktop"),
     (str(project_root / "scripts" / "RuSentilex-2017.txt"), "scripts"),
@@ -54,7 +65,7 @@ if onefile:
         analysis.zipfiles,
         analysis.datas,
         [],
-        name="SentiSoft-RusEmoLex",
+        name="SentiSoft-NRC2022",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -74,7 +85,7 @@ else:
         analysis.scripts,
         [],
         exclude_binaries=True,
-        name="SentiSoft-RusEmoLex",
+        name="SentiSoft-NRC2022",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -94,5 +105,5 @@ else:
         strip=False,
         upx=True,
         upx_exclude=[],
-        name="SentiSoft-RusEmoLex",
+        name="SentiSoft-NRC2022",
     )

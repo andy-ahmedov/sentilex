@@ -103,6 +103,12 @@ else {
     $env:SENTILEX_ONEFILE = "0"
 }
 
+if (-not (Test-Path (Join-Path $repoRoot "scripts\data\nrc2022\Russian-NRC-EmoLex.txt"))) {
+    Write-Host "[build] prepare local NRC 2022 research resource"
+    & $venvPython tools/prepare_nrc2022.py
+    if ($LASTEXITCODE -ne 0) { throw "NRC 2022 resource preparation failed" }
+}
+
 Write-Host "[build] run pyinstaller"
 & $venvPython -m PyInstaller --clean --noconfirm desktop/sentilex.spec --distpath $stageDist --workpath $stageWork
 if ($LASTEXITCODE -ne 0) {
@@ -110,13 +116,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($OneFile) {
-    $target = Join-Path $repoRoot "dist\SentiSoft-RusEmoLex.exe"
-    Copy-Item (Join-Path $stageDist "SentiSoft-RusEmoLex.exe") $target -Force
+    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022.exe"
+    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022.exe") $target -Force
     Write-Host "Build complete (onefile): $target"
 }
 else {
-    $target = Join-Path $repoRoot "dist\SentiSoft-RusEmoLex"
-    Copy-Item (Join-Path $stageDist "SentiSoft-RusEmoLex") (Join-Path $repoRoot "dist") -Recurse -Force
+    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022"
+    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022") (Join-Path $repoRoot "dist") -Recurse -Force
     Write-Host "Build complete (onedir): $target"
 }
 Write-Host "NTFS staging retained: $stageRoot"

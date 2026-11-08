@@ -231,15 +231,15 @@ class MainWindowController(QObject):
         self.emotion_save_buttons = {}
         import json
         info = json.loads(resource_path('desktop', 'build_info.json').read_text(encoding='utf-8'))
-        self.version_label = QLabel(f'RusEmoLex · сборка {info["build_date"]}')
+        self.version_label = QLabel(f'NRC EmoLex 2022 · сборка {info["build_date"]}')
         self.version_label.setWordWrap(True)
         self.version_label.setStyleSheet("color:#483d65; background:transparent;")
         self.version_label.setToolTip(
-            "Встроенный словарь: 1024 записи, пять эмоций. Ярошенко П.В., Лукашевич Н.В., 2025. "
-            "Лексические метки: контекст, отрицания и ирония не учитываются. "
-            "https://doi.org/10.22363/2687-0088-44439")
+            "NRC EmoLex: восемь эмоций. Saif M. Mohammad, Peter D. Turney; NRC Canada. "
+            "Русский перевод: Google Translate, август 2022. Контекст, отрицания и ирония не учитываются. "
+            "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
         self.control_panel.layout().addWidget(self.version_label)
-        self.window.setWindowTitle(f'SentiSoft · RusEmoLex · {info["build_date"]}')
+        self.window.setWindowTitle(f'SentiSoft · NRC2022 · {info["build_date"]}')
         self.plot_tabs = QTabWidget()
         self.plot_tabs.setStyleSheet("QTabWidget::pane {background:#faf9ff; border:1px solid #d8ccff;} QTabBar::tab {background:#eee8ff; color:#5632c3; padding:7px 14px;} QTabBar::tab:selected {background:#faf9ff; font-weight:bold;} QWidget {background:#faf9ff; color:#483d65;} QPushButton {background:#eee8ff; color:#5632c3; border:1px solid #d8ccff; border-radius:8px; padding:6px;}")
         index = self.results_splitter.indexOf(self.plot_preview)
@@ -816,9 +816,11 @@ class PackagedSmokeReceiver(QObject):
                 self.controller.window.grab().save(str(self.report.with_name(self.report.stem + "_markers.png")))
             from scripts import emotions
             artifacts['dictionary'] = dict(sha256=emotions.SOURCE_SHA256,
-                                           entries=1024, categories=list(emotions.LABELS),
-                                           source_exists=(emotions.DATA_DIR / 'RusEmoLex.SOURCE.md').is_file(),
-                                           checksum_exists=(emotions.DATA_DIR / 'RusEmoLex.sha256').is_file(),
+                                           entries=emotions.SOURCE_ROWS, categories=list(emotions.LABELS),
+                                           source_exists=(emotions.DATA_DIR / 'NRC2022.SOURCE.md').is_file(),
+                                           checksum_exists=(emotions.DATA_DIR / 'NRC2022.sha256').is_file(),
+                                           translation=emotions.source_metadata()['translation'],
+                                           readme_exists=(emotions.DATA_DIR / 'nrc2022' / 'README.txt').is_file(),
                                            offline=os.environ.get('SENTILEX_SMOKE_OFFLINE') == '1')
             self.controller.plot_tabs.setCurrentIndex(2)
             self.app.processEvents()
