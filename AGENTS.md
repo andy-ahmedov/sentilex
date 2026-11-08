@@ -38,7 +38,7 @@ Command:
 If the golden output needs to change intentionally, document why and update the baseline file in the same PR.
 
 ## Emotional phase contract
-- Keep original tone segmentation named “Эмоциональные фазы” and API `emotional_phases`. “Эмоциональные кластеры” now names the separate NRC marker feature (dominant-category chunks, not mathematical clustering).
+- Keep original tone segmentation named “Эмоциональные фазы” and API `emotional_phases`. “Эмоциональные кластеры” now names the separate RusEmoLex marker feature (dominant-category chunks, not mathematical clustering).
 - Preserve classification relative to `mean ± 0.5 * std`, minimum run length `max(2, chunk_size // 2)`, merge tie-breaking, inclusive sentence intervals, and length-weighted shares unless explicitly changing behavior.
 - Phase shares differ from web sentiment distribution at fixed thresholds. Explain this distinction in user-facing docs; phase labels do not imply a sign relative to zero.
 - Mirror phase detection, formatting, plotting and historical left-to-right chunk accumulation in runtime and standalone export. Run precision, golden and affected desktop checks; run export/reanalysis sequentially.
@@ -76,8 +76,8 @@ Core web application code lives in `app.py` (Flask routes, upload handling, orch
 - `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_chunk_slider.py`: verify that desktop chunk-size slider options are derived from the selected file's sentence count.
 - `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/render_main.py`: render `desktop/ui/main.ui` to `docs/design/desktop_parity.png` without a display (WSL/headless).
 - `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/render_variants.py`: render desktop GUI design variants to `docs/design/*.png` without a display (WSL/headless).
-- `powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1`: build Windows desktop `onedir` bundle (`dist/SentiSoft/`) via PyInstaller (use Python 3.10/3.11 for pymorphy2 compatibility).
-- `powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1 -OneFile`: build Windows desktop `onefile` executable (`dist/SentiSoft.exe`) (use Python 3.10/3.11 for pymorphy2 compatibility).
+- `powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1`: build Windows desktop `onedir` bundle (`dist/SentiSoft-RusEmoLex/`) via PyInstaller (use Python 3.10/3.11 for pymorphy2 compatibility).
+- `powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1 -OneFile`: build Windows desktop `onefile` executable (`dist/SentiSoft-RusEmoLex.exe`) (use Python 3.10/3.11 for pymorphy2 compatibility).
 
 ## Coding Style & Naming Conventions
 Use Python 3.10+ and follow PEP 8 style (4-space indentation, `snake_case` for functions/variables, `UPPER_CASE` for constants like `UPLOAD_FOLDER`). Keep Flask route handlers in `app.py` thin, and place processing logic in `scripts/functions.py`. Prefer small, single-purpose functions and explicit file encodings (`encoding='utf-8'`) for text I/O.
@@ -119,28 +119,19 @@ The current history uses short, imperative commit messages (e.g., `Update README
 ## Execution plans
 
 For feature work, multi-step refactors, or any task that mentions `PLANS.md`:
-- read `/PLANS.md` before touching code;
-- treat `/PLANS.md` as the implementation source of truth;
+- read `PLANS.md` in the repository (or `/PLANS.md` if supplied) before touching code;
+- treat that `PLANS.md` as the implementation source of truth;
 - keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current;
-- if the real repository differs from the plan, update `/PLANS.md` first, then continue implementation;
-- run the validation commands specified in `/PLANS.md` after each milestone.
+- if the real repository differs from the plan, update `PLANS.md` first, then continue implementation;
+- run the validation commands specified in `PLANS.md` after each milestone.
 
-## NRC desktop emotions
-- External NRC ZIP/XLSX must never be committed, bundled or embedded into exported PY. Ignore NRC archives and Windows build artifacts.
-- Run `.venv/bin/python desktop/smoke_emotions.py` for marker counts, ties, shares and external archive import. Desktop requires openpyxl from desktop/requirements.txt.
-
-- Windows builds from WSL UNC sources use `%LOCALAPPDATA%/SentilexBuild/venv`; `-VenvPath` accepts an absolute Windows path. The builder bootstraps pip if needed.
-- Frozen verification: set `SENTILEX_SMOKE_INPUT` and `SENTILEX_SMOKE_REPORT` to absolute paths; optional `SENTILEX_SMOKE_NRC` selects an external archive. The exe runs the actual worker, renders its results, writes a JSON manifest and PNG next to the report, and exits.
-- GUI regression: `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_emotion_gui.py` (requires the local external archive).
-
-- `powershell -ExecutionPolicy Bypass -File tools/smoke_frozen.ps1 [-NrcPath <ZIP-or-XLSX>]` tests a local NTFS copy of dist/SentiSoft.exe; manifest/screenshot are copied to dist. It compares tone TXT after CRLF normalization.
-
-- Desktop numeric chunk input accepts 1…sentence_count and inserts exact values into the file-derived slider choices. Initial choices include 1..10 (within text length), then tens and the final sentence count; preserve existing defaults. Verify two-way synchronization with smoke_chunk_slider.py. Chapter-label stride is ordinal (1, 1+N, …), defaults to 1, preserves chapter boundaries and TXT; export mirrors it through CHAPTER_LABEL_STEP.
-
-- `.venv/bin/python desktop/smoke_plot_options.py` validates dense chapter labels, full plot legend and exported default chapter stride without changing metrics.
-
-- NRC fill rendering: `.venv/bin/python desktop/smoke_emotion_fills.py` checks curve clipping, solid palette, vertical ties and chunk boundaries.
-
-- NRC reports: `count_chunks` retains sentence/marker offsets and sums sentence counts into chunk counts. Keep longest-match/no-overlap rules and independent sentence/chunk leaders. HTML is escaped, offline and displayed in the “Маркеры кластеров” tab; clear it on rerun, error and tone-only analysis. Frozen smoke checks HTML and captures an additional `_markers.png`.
-
-- A running Windows exe cannot be overwritten. Do not stop the user application: stage the PyInstaller build with `--distpath` on local NTFS and copy it to `dist/SentiSoft-clusters.exe`. `tools/smoke_frozen.ps1 -ExePath <absolute Windows path>` verifies an alternate executable; default remains dist/SentiSoft.exe.
+## RusEmoLex desktop emotions
+- Built-in `scripts/data/RusEmoLex.csv`: preserve exact bytes/SHA256 and provenance at commit b485f34def81f622295b28bd7e5558e3581a8a9e. Package CSV, source and original README. Five-vector order: anger, sadness, joy, fear, surprise. Source occurrence counts are never weights. Do not commit external NRC or Windows artifacts.
+- `.venv/bin/python desktop/smoke_emotions.py`: 1024 source rows / 999 normalized keys, five classes, phrases/repeats/union/ties, densities, CSV/TXT/HTML and plots. No external archive or openpyxl required.
+- Density = category markers / all alphabetic tokens; zero denominator gives zero. Sentence/chunk words and counts add up. UI/plots/TXT/HTML show markers per 100 words; CSV writes decimal ratios with a dot. Leaders use unrounded densities. Keep longest-match/no-overlap and duplicate-category union.
+- Default chunk size is 1 after every file selection. Numeric input allows 1…sentence_count; slider starts at 1…10 then tens/final count and accepts inserted exact input. Before a file, controls are disabled with minimum 1 and unknown maximum. `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_chunk_slider.py` checks synchronization/defaults.
+- `QT_QPA_PLATFORM=offscreen .venv/bin/python desktop/smoke_emotion_gui.py` runs actual threaded analysis, saves all six artifacts, checks refresh/error cleanup, supplied chapter sizes 1/2/3 when available, and dense text. It verifies stale NRC settings in an isolated temporary settings directory do not affect analysis.
+- `.venv/bin/python desktop/smoke_emotion_fills.py` checks curve clipping, palette, gradients and five-row matrix. Density curves stay constant within each chunk; keep all boundaries. HTML is escaped/offline, traces offsets and labels; clear every preview/save action on file change, rerun or failure. Preserve `_emotions.*`, add `_emotion_density.png` and `_emotion_sentences.csv`.
+- `.venv/bin/python desktop/smoke_plot_options.py` checks chapter stride and tonal legend/export. Chapter stride is ordinal (1, 1+N, …), default 1; export mirrors CHAPTER_LABEL_STEP. Tone and standalone export remain independent of RusEmoLex.
+- Windows builds from WSL UNC use `%LOCALAPPDATA%/SentilexBuild/venv`; `-VenvPath` accepts an absolute Windows path. Builder stages on local NTFS and copies only `dist/SentiSoft-RusEmoLex.exe` (onedir: `dist/SentiSoft-RusEmoLex/`). Never stop user applications or remove old dist outputs. Build metadata carries the actual UTC date.
+- `powershell -ExecutionPolicy Bypass -File tools/smoke_frozen.ps1 [-ExePath <absolute Windows path>]` tests a local NTFS copy of that exe, bundled dictionary/source/checksum, six emotion outputs and tone golden after CRLF normalization; JSON and cluster/marker/density screenshots go to dist. It sets `SENTILEX_SMOKE_OFFLINE=1`, forbidding outgoing Python socket connections. Direct smoke also needs absolute `SENTILEX_SMOKE_INPUT` and `SENTILEX_SMOKE_REPORT`. No NRC environment/settings are read.
