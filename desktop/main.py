@@ -8,7 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QFile, QObject, QEvent, QTimer, Qt, QThread, QUrl, Signal, Slot, QSettings
+from PySide6.QtCore import QFile, QObject, QEvent, QTimer, Qt, QThread, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QPixmap, QTextCursor
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -98,6 +98,13 @@ if str(RUNTIME_ROOT) not in sys.path:
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# The packaged smoke forbids outbound socket connections before importing analysis.
+if os.environ.get("SENTILEX_SMOKE_OFFLINE") == "1":
+    def _offline_audit(event, args):
+        if event == "socket.connect":
+            raise RuntimeError("Offline smoke: network connection attempted")
+    sys.addaudithook(_offline_audit)
+
 import matplotlib  # noqa: E402
 
 # Workers render files; a GUI Matplotlib backend cannot run in QThread.
@@ -109,24 +116,29 @@ class AnalysisWorker(QObject):
     finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, file_path: Path, chunk_size: int, emotion_path=None, chapter_label_step=1) -> None:
+    def __init__(self, file_path: Path, chunk_size: int, chapter_label_step=1) -> None:
         super().__init__()
         self.chapter_label_step = chapter_label_step
-        self.emotion_path = emotion_path
         self.file_path = file_path
         self.chunk_size = chunk_size
 
     @Slot()
     def run(self) -> None:
+        from scripts import emotions
+        filename = secure_filename(self.file_path.name)
+        emotion_paths = emotions.result_paths(runtime_path('results', filename))
         try:
-            filename = secure_filename(self.file_path.name)
+            # Never expose artifacts from a previous or incomplete analysis.
+            for path in emotion_paths.values():
+                Path(path).unlink(missing_ok=True)
+            lexicon, digest = emotions.load_lexicon(web_app.functions.morph_vocab)
             artifacts = web_app.process_text(
                 str(self.file_path),
                 filename,
                 self.chunk_size,
                 export_script_file=True,
                 chapter_label_step=self.chapter_label_step,
-                include_analysis_data=bool(self.emotion_path),
+                include_analysis_data=True,
             )
 
             result_txt = Path(artifacts["result_txt"])
@@ -136,16 +148,18 @@ class AnalysisWorker(QObject):
             if not result_txt.exists() or not result_png.exists() or not result_py.exists():
                 raise FileNotFoundError("Файлы результатов не были созданы")
 
-            if self.emotion_path:
-                from scripts import emotions
-                lexicon, digest = emotions.load_lexicon(self.emotion_path, web_app.functions.morph_vocab)
-                data = artifacts.pop("analysis_data")
-                artifacts["emotions"] = emotions.write_results(
-                    data["sentences"], data["sentiments"], self.chunk_size, lexicon,
-                    digest, web_app.functions.morph_vocab, result_txt.parent / filename,
-                )
+            data = artifacts.pop("analysis_data")
+            artifacts["emotions"] = emotions.write_results(
+                data["sentences"], data["sentiments"], self.chunk_size, lexicon,
+                digest, web_app.functions.morph_vocab, result_txt.parent / filename,
+            )
             self.finished.emit(artifacts)
         except Exception as exc:  # noqa: BLE001
+            for path in emotion_paths.values():
+                try:
+                    Path(path).unlink(missing_ok=True)
+                except OSError:
+                    pass
             self.failed.emit(str(exc))
 
 
@@ -213,18 +227,19 @@ class MainWindowController(QObject):
                 layout.insertWidget(index + 2, self.chapter_step)
                 break
         self.chunk_number.valueChanged.connect(self._on_chunk_number_changed)
-        self.settings = QSettings("Sentilex", "Sentilex")
-        self.emotion_path = self.settings.value("nrc_path", "")
         self.emotion_results = {}
-        self.nrc_button = QPushButton("Подключить NRC EmoLex ZIP / XLSX")
-        self.nrc_button.setStyleSheet("QPushButton {background:#eee8ff; color:#5632c3; border:1px solid #d8ccff; border-radius:8px; padding:8px;} QPushButton:hover {background:#e3d8ff;}")
-        self.nrc_button.clicked.connect(self.choose_emotion_lexicon)
-        self.control_panel.layout().addWidget(self.nrc_button)
-        self.nrc_status = QLabel("NRC: " + (Path(self.emotion_path).name if self.emotion_path else "не подключён"))
-        self.nrc_status.setStyleSheet("color:#483d65; background:transparent;")
-        self.nrc_status.setWordWrap(True)
-        self.nrc_status.setToolTip("NRC EmoLex 0.92 — Saif M. Mohammad, Peter D. Turney; NRC Canada. Автоматический русский перевод 2017. https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
-        self.control_panel.layout().addWidget(self.nrc_status)
+        self.emotion_save_buttons = {}
+        import json
+        info = json.loads(resource_path('desktop', 'build_info.json').read_text(encoding='utf-8'))
+        self.version_label = QLabel(f'RusEmoLex · сборка {info["build_date"]}')
+        self.version_label.setWordWrap(True)
+        self.version_label.setStyleSheet("color:#483d65; background:transparent;")
+        self.version_label.setToolTip(
+            "Встроенный словарь: 1024 записи, пять эмоций. Ярошенко П.В., Лукашевич Н.В., 2025. "
+            "Лексические метки: контекст, отрицания и ирония не учитываются. "
+            "https://doi.org/10.22363/2687-0088-44439")
+        self.control_panel.layout().addWidget(self.version_label)
+        self.window.setWindowTitle(f'SentiSoft · RusEmoLex · {info["build_date"]}')
         self.plot_tabs = QTabWidget()
         self.plot_tabs.setStyleSheet("QTabWidget::pane {background:#faf9ff; border:1px solid #d8ccff;} QTabBar::tab {background:#eee8ff; color:#5632c3; padding:7px 14px;} QTabBar::tab:selected {background:#faf9ff; font-weight:bold;} QWidget {background:#faf9ff; color:#483d65;} QPushButton {background:#eee8ff; color:#5632c3; border:1px solid #d8ccff; border-radius:8px; padding:6px;}")
         index = self.results_splitter.indexOf(self.plot_preview)
@@ -232,30 +247,50 @@ class MainWindowController(QObject):
         self.plot_tabs.addTab(self.plot_preview, "Тональность")
         emotion_page = QWidget()
         emotion_layout = QVBoxLayout(emotion_page)
-        self.emotion_preview = QLabel("Подключите NRC для анализа эмоциональных кластеров")
+        self.emotion_preview = QLabel("Выберите текст и выполните анализ")
         self.emotion_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.emotion_preview.setMinimumSize(100, 100)
-        self.emotion_preview.installEventFilter(self)
         emotion_layout.addWidget(self.emotion_preview, 1)
-        for kind in ("png", "txt", "csv"):
-            button = QPushButton("Сохранить кластеры " + kind.upper())
+        for kind, title in (("png", "График кластеров PNG"), ("txt", "Отчёт TXT"),
+                            ("csv", "Фрагменты CSV"), ("sentences_csv", "Предложения CSV")):
+            button = QPushButton("Сохранить: " + title)
             button.clicked.connect(lambda checked=False, k=kind: self.save_emotion_result(k))
+            button.setEnabled(False)
+            self.emotion_save_buttons[kind] = button
             emotion_layout.addWidget(button)
         self.plot_tabs.addTab(emotion_page, "Эмоциональные кластеры")
+        density_page = QWidget()
+        density_layout = QVBoxLayout(density_page)
+        self.density_preview = QLabel("Выберите текст и выполните анализ")
+        self.density_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.density_preview.setMinimumSize(100, 100)
+        density_layout.addWidget(self.density_preview, 1)
+        density_hint = QLabel("Число маркеров каждой эмоции на 100 слов фрагмента. Нажмите на график для увеличения.")
+        density_hint.setWordWrap(True)
+        density_layout.addWidget(density_hint)
+        density_button = QPushButton("Сохранить плотность эмоций PNG")
+        density_button.clicked.connect(lambda: self.save_emotion_result("density_png"))
+        density_button.setEnabled(False)
+        self.emotion_save_buttons['density_png'] = density_button
+        density_layout.addWidget(density_button)
+        self.plot_tabs.addTab(density_page, "Плотность эмоций")
         marker_page = QWidget()
         marker_layout = QVBoxLayout(marker_page)
         self.emotion_report = QTextBrowser()
         self.emotion_report.setObjectName("emotionMarkerReport")
         self.emotion_report.setOpenLinks(False)
         self.emotion_report.setOpenExternalLinks(False)
-        self.emotion_report.setPlainText("Подключите NRC и выполните анализ для просмотра маркеров кластеров.")
+        self.emotion_report.setPlainText("После анализа здесь появятся найденные слова и связанные с ними эмоции.")
         marker_layout.addWidget(self.emotion_report, 1)
         self.save_cluster_html_button = QPushButton("Сохранить отчёт кластеров HTML")
         self.save_cluster_html_button.setEnabled(False)
+        self.emotion_save_buttons["html"] = self.save_cluster_html_button
         self.save_cluster_html_button.clicked.connect(lambda: self.save_emotion_result("html"))
         marker_layout.addWidget(self.save_cluster_html_button)
         self.plot_tabs.addTab(marker_page, "Маркеры кластеров")
         self.results_splitter.insertWidget(index, self.plot_tabs)
+        self.emotion_preview.installEventFilter(self)
+        self.density_preview.installEventFilter(self)
         self.window.installEventFilter(self)
         self.upload_box.setCursor(self.browse_button.cursor())
         self.upload_box.installEventFilter(self)
@@ -271,6 +306,7 @@ class MainWindowController(QObject):
 
         self.results_splitter.setStretchFactor(0, 3)
         self.results_splitter.setStretchFactor(1, 2)
+        self._configure_chunk_slider(0)
         self._set_idle_state()
         self._on_chunk_changed(self.chunk_slider.value())
         QTimer.singleShot(0, self._post_show_setup)
@@ -339,11 +375,11 @@ class MainWindowController(QObject):
                 return True
             self.choose_file()
             return True
-        if watched is self.emotion_preview:
+        if watched in (self.emotion_preview, self.density_preview):
             if event.type() == QEvent.Resize:
                 self.refresh_emotion_preview()
             if event.type() == QEvent.MouseButtonRelease and self.emotion_results:
-                self.open_plot_preview(Path(self.emotion_results["png"]))
+                self.open_plot_preview(Path(self.emotion_results["density_png" if watched is self.density_preview else "png"]))
                 return True
         if watched is self.plot_preview:
             if event.type() == QEvent.MouseButtonRelease:
@@ -354,7 +390,7 @@ class MainWindowController(QObject):
         return super().eventFilter(watched, event)
 
     def _set_idle_state(self) -> None:
-        self.status_label.setText("Состояние: idle")
+        self.status_label.setText("Состояние: ожидание файла")
         self.progress_bar.setVisible(False)
         self.submit_button.setEnabled(False)
         self.browse_button.setEnabled(True)
@@ -406,12 +442,7 @@ class MainWindowController(QObject):
     def _pick_default_chunk_size(self, allowed_sizes: list[int]) -> int:
         if not allowed_sizes:
             return 0
-        if 50 in allowed_sizes:
-            return 50
-        smaller_sizes = [value for value in allowed_sizes if value < 50]
-        if smaller_sizes:
-            return smaller_sizes[-1]
-        return allowed_sizes[-1]
+        return 1
 
     def _configure_chunk_slider(self, sentence_count: int) -> None:
         self.selected_sentence_count = sentence_count
@@ -423,10 +454,11 @@ class MainWindowController(QObject):
 
         if not self.allowed_chunk_sizes:
             self.chunk_slider.setEnabled(False)
-            self.chunk_min_label.setText("0")
-            self.chunk_max_label.setText("0")
+            self.chunk_min_label.setText("1")
+            self.chunk_max_label.setText("—")
             self.chunk_current_label.setText("Текущее значение: недоступно")
-            self.sentence_count_label.setText("Не удалось определить предложения в выбранном файле.")
+            self.chunk_number.setValue(1)
+            self.sentence_count_label.setText("Выберите файл, чтобы определить число предложений.")
             return
 
         default_chunk_size = self._pick_default_chunk_size(self.allowed_chunk_sizes)
@@ -459,7 +491,7 @@ class MainWindowController(QObject):
             self.window,
             "Выберите .txt файл",
             str(runtime_path()),
-            "Text files (*.txt)",
+            "Текстовые файлы (*.txt)",
         )
         if not file_name:
             return
@@ -489,14 +521,15 @@ class MainWindowController(QObject):
         self.file_path_edit.setText(str(file_path))
         self.upload_label.setText(file_path.name)
         self._configure_chunk_slider(len(sentences))
-        self.status_label.setText("Состояние: ready")
+        self.clear_results("Параметры нового файла готовы. Нажмите «Анализировать».")
+        self.status_label.setText("Состояние: готово к анализу")
         self.submit_button.setEnabled(True)
 
     def _set_analyzing_state(self) -> None:
         self.analysis_in_progress = True
         self.chunk_number.setEnabled(False)
         self.chapter_step.setEnabled(False)
-        self.status_label.setText("Состояние: analyzing")
+        self.status_label.setText("Состояние: идёт анализ")
         self.progress_bar.setVisible(True)
         self.submit_button.setEnabled(False)
         self.browse_button.setEnabled(False)
@@ -511,7 +544,7 @@ class MainWindowController(QObject):
     def _set_done_state(self) -> None:
         self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
         self.chapter_step.setEnabled(True)
-        self.status_label.setText("Состояние: done")
+        self.status_label.setText("Состояние: анализ завершён")
         self.progress_bar.setVisible(False)
         self.browse_button.setEnabled(True)
         self.chunk_slider.setEnabled(bool(self.allowed_chunk_sizes))
@@ -526,7 +559,7 @@ class MainWindowController(QObject):
     def _set_error_state(self, message: str) -> None:
         self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
         self.chapter_step.setEnabled(True)
-        self.status_label.setText("Состояние: error")
+        self.status_label.setText("Состояние: ошибка анализа")
         self.progress_bar.setVisible(False)
         self.browse_button.setEnabled(True)
         self.chunk_slider.setEnabled(bool(self.allowed_chunk_sizes))
@@ -547,19 +580,7 @@ class MainWindowController(QObject):
             QMessageBox.warning(self.window, "Нет файла", "Сначала выберите .txt файл")
             return
 
-        self.emotion_results = {}
-        self.emotion_report.setPlainText("Идёт анализ кластеров..." if self.emotion_path else "NRC не подключён; выполняется только анализ тональности.")
-        self.save_cluster_html_button.setEnabled(False)
-        self.emotion_preview.clear()
-        self.emotion_preview.setText("Идёт анализ эмоциональных кластеров..." if self.emotion_path else "NRC не подключён")
-        self.current_result_txt = None
-        self.current_result_png = None
-        self.current_result_py = None
-        self.current_plot_pixmap = None
-        self.result_text_preview.setPlainText("Идёт анализ...")
-        self.result_text_preview.moveCursor(QTextCursor.MoveOperation.Start)
-        self.plot_preview.setText("Идёт построение графика...")
-        self.plot_preview.setPixmap(QPixmap())
+        self.clear_results("Идёт анализ…")
 
         self._set_analyzing_state()
 
@@ -568,14 +589,9 @@ class MainWindowController(QObject):
             self._set_error_state("Недоступен размер фрагмента")
             return
 
-        if self.emotion_path and not Path(self.emotion_path).is_file():
-            QMessageBox.warning(self.window, "NRC недоступен", "Словарь перемещён или удалён. Выполняется только анализ тональности; подключите NRC повторно.")
-            self.emotion_path = ""
-            self.settings.remove("nrc_path")
-            self.nrc_status.setText("NRC: не подключён")
         chunk_size = self.allowed_chunk_sizes[self.chunk_slider.value()]
         self.thread = QThread(self.window)
-        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.emotion_path or None, self.chapter_step.value())
+        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.chapter_step.value())
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -638,8 +654,9 @@ class MainWindowController(QObject):
                 self.emotion_report.setHtml(Path(self.emotion_results["html"]).read_text(encoding="utf-8"))
                 self.emotion_report.moveCursor(QTextCursor.MoveOperation.Start)
             else:
-                self.emotion_report.setPlainText("NRC не подключён; маркеры кластеров не анализировались.")
-            self.save_cluster_html_button.setEnabled(bool(self.emotion_results))
+                self.emotion_report.setPlainText("Результаты эмоций недоступны. Повторите анализ.")
+            for button in self.emotion_save_buttons.values():
+                button.setEnabled(bool(self.emotion_results))
             self.current_result_txt = Path(txt_path)
             self.current_result_png = Path(png_path)
             self.current_result_py = Path(py_path)
@@ -656,38 +673,26 @@ class MainWindowController(QObject):
 
     @Slot(str)
     def on_analysis_failed(self, message: str) -> None:
-        self.emotion_results = {}
-        self.emotion_report.setPlainText("Ошибка анализа эмоциональных кластеров.")
-        self.save_cluster_html_button.setEnabled(False)
-        self.emotion_preview.clear()
-        self.emotion_preview.setText("Ошибка анализа эмоциональных кластеров")
-        self.current_result_txt = None
-        self.current_result_png = None
-        self.current_result_py = None
-        self.current_plot_pixmap = None
-        self.result_text_preview.setPlainText("Ошибка анализа. Подробности в сообщении.")
-        self.result_text_preview.moveCursor(QTextCursor.MoveOperation.Start)
-        self.plot_preview.setPixmap(QPixmap())
-        self.plot_preview.setText("Не удалось построить график.")
+        self.clear_results("Не удалось выполнить анализ. Повторите попытку.")
         self._set_error_state(message)
 
     @Slot()
     def save_txt_result(self) -> None:
         if self.current_result_txt is None:
             return
-        self._save_result_copy(self.current_result_txt, "Text files (*.txt)")
+        self._save_result_copy(self.current_result_txt, "Текстовые файлы (*.txt)")
 
     @Slot()
     def save_png_result(self) -> None:
         if self.current_result_png is None:
             return
-        self._save_result_copy(self.current_result_png, "PNG files (*.png)")
+        self._save_result_copy(self.current_result_png, "Изображения PNG (*.png)")
 
     @Slot()
     def save_py_result(self) -> None:
         if self.current_result_py is None:
             return
-        self._save_result_copy(self.current_result_py, "Python files (*.py)")
+        self._save_result_copy(self.current_result_py, "Скрипт Python (*.py)")
 
     def _save_result_copy(self, source_path: Path, file_filter: str) -> None:
         target_path, _ = QFileDialog.getSaveFileName(
@@ -740,27 +745,39 @@ class MainWindowController(QObject):
 
         dialog.exec()
 
-    def choose_emotion_lexicon(self):
-        if self.analysis_in_progress:
-            return
-        path, _ = QFileDialog.getOpenFileName(self.window, "NRC EmoLex (официальный архив или таблица)", "", "NRC (*.zip *.xlsx)")
-        if path:
-            self.emotion_path = path
-            self.settings.setValue("nrc_path", path)
-            self.nrc_status.setText("NRC: " + Path(path).name)
-            self.nrc_status.setToolTip("NRC EmoLex — Saif M. Mohammad, Peter D. Turney; NRC Canada. Русский перевод 2017. https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
+    def clear_results(self, message):
+        self.emotion_results = {}
+        self.emotion_report.setPlainText(message)
+        for button in self.emotion_save_buttons.values():
+            button.setEnabled(False)
+        for preview in (self.emotion_preview, self.density_preview, self.plot_preview):
+            preview.clear()
+            preview.setText(message)
+        self.current_result_txt = None
+        self.current_result_png = None
+        self.current_result_py = None
+        self.current_plot_pixmap = None
+        self.result_text_preview.setPlainText(message)
+        for button in (self.download_txt_button, self.download_png_button,
+                       self.download_py_button, self.open_results_folder_button):
+            button.setEnabled(False)
+        self._set_plot_click_enabled(False)
 
     def save_emotion_result(self, kind):
-        if self.emotion_results and not self.analysis_in_progress:
-            self._save_result_copy(Path(self.emotion_results[kind]), f"{kind.upper()} (*.{kind})")
+        if kind in self.emotion_results and not self.analysis_in_progress:
+            path = Path(self.emotion_results[kind])
+            suffix = path.suffix
+            self._save_result_copy(path, f'{suffix[1:].upper()} (*{suffix})')
 
     def refresh_emotion_preview(self):
-        if not self.emotion_results:
-            self.emotion_preview.clear()
-            self.emotion_preview.setText("Подключите NRC для анализа эмоциональных кластеров")
-        if self.emotion_results:
-            pixmap = self._load_png_pixmap(Path(self.emotion_results["png"]))
-            self.emotion_preview.setPixmap(pixmap.scaled(self.emotion_preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        for preview, key in ((self.emotion_preview, 'png'), (self.density_preview, 'density_png')):
+            if self.emotion_results:
+                pixmap = self._load_png_pixmap(Path(self.emotion_results[key]))
+                preview.setPixmap(pixmap.scaled(preview.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                                               Qt.TransformationMode.SmoothTransformation))
+            else:
+                preview.clear()
+                preview.setText("Выберите текст и выполните анализ")
 
     @Slot()
     def shutdown(self) -> None:
@@ -792,11 +809,20 @@ class PackagedSmokeReceiver(QObject):
             self.app.processEvents()
             self.controller.window.grab().save(str(self.report.with_suffix(".png")))
             if artifacts.get("emotions"):
-                if 'Лидеры предложения:' not in self.controller.emotion_report.toPlainText():
+                if 'Преобладающ' not in self.controller.emotion_report.toPlainText():
                     raise RuntimeError("Packaged marker report was not rendered")
-                self.controller.plot_tabs.setCurrentIndex(2)
+                self.controller.plot_tabs.setCurrentIndex(3)
                 self.app.processEvents()
                 self.controller.window.grab().save(str(self.report.with_name(self.report.stem + "_markers.png")))
+            from scripts import emotions
+            artifacts['dictionary'] = dict(sha256=emotions.SOURCE_SHA256,
+                                           entries=1024, categories=list(emotions.LABELS),
+                                           source_exists=(emotions.DATA_DIR / 'RusEmoLex.SOURCE.md').is_file(),
+                                           checksum_exists=(emotions.DATA_DIR / 'RusEmoLex.sha256').is_file(),
+                                           offline=os.environ.get('SENTILEX_SMOKE_OFFLINE') == '1')
+            self.controller.plot_tabs.setCurrentIndex(2)
+            self.app.processEvents()
+            self.controller.window.grab().save(str(self.report.with_name(self.report.stem + "_density.png")))
             self.report.write_text(json.dumps(artifacts, ensure_ascii=False), encoding="utf-8")
         except Exception as exc:
             self.failed(str(exc))
@@ -865,8 +891,7 @@ def main() -> int:
     if os.environ.get("SENTILEX_SMOKE_INPUT"):
         import json
         report = Path(os.environ["SENTILEX_SMOKE_REPORT"])
-        worker = AnalysisWorker(Path(os.environ["SENTILEX_SMOKE_INPUT"]), 50,
-                                os.environ.get("SENTILEX_SMOKE_NRC") or None)
+        worker = AnalysisWorker(Path(os.environ["SENTILEX_SMOKE_INPUT"]), 50)
         thread = QThread(window)
         worker.moveToThread(thread)
         receiver = PackagedSmokeReceiver(controller, app, thread, report)

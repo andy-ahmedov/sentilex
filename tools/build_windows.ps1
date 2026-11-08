@@ -50,13 +50,12 @@ if ([Version]$venvVersion -ge [Version]"3.12") {
     throw "Detected Python $venvVersion in $VenvPath. Use Python 3.10 or 3.11 for SentiSoft desktop build (pymorphy2 compatibility)."
 }
 
-Get-Process -Name "SentiSoft" -ErrorAction SilentlyContinue | Stop-Process -Force
-if (Test-Path (Join-Path $repoRoot "build")) {
-    Remove-Item (Join-Path $repoRoot "build") -Recurse -Force
-}
-if (Test-Path (Join-Path $repoRoot "dist")) {
-    Remove-Item (Join-Path $repoRoot "dist") -Recurse -Force
-}
+# Keep running user executables and all previous dist artifacts untouched.
+$stageRoot = Join-Path $env:LOCALAPPDATA ("SentilexBuild\stage-" + [guid]::NewGuid().ToString("N"))
+$stageDist = Join-Path $stageRoot "dist"
+$stageWork = Join-Path $stageRoot "build"
+New-Item -ItemType Directory -Force -Path $stageDist | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $repoRoot "dist") | Out-Null
 
 Write-Host "[build] ensure pip"
 & $venvPython -m pip --version
@@ -105,14 +104,19 @@ else {
 }
 
 Write-Host "[build] run pyinstaller"
-& $venvPython -m PyInstaller --clean --noconfirm desktop/sentilex.spec
+& $venvPython -m PyInstaller --clean --noconfirm desktop/sentilex.spec --distpath $stageDist --workpath $stageWork
 if ($LASTEXITCODE -ne 0) {
     throw "pyinstaller build failed with exit code $LASTEXITCODE"
 }
 
 if ($OneFile) {
-    Write-Host "Build complete (onefile): dist/SentiSoft.exe"
+    $target = Join-Path $repoRoot "dist\SentiSoft-RusEmoLex.exe"
+    Copy-Item (Join-Path $stageDist "SentiSoft-RusEmoLex.exe") $target -Force
+    Write-Host "Build complete (onefile): $target"
 }
 else {
-    Write-Host "Build complete (onedir): dist/SentiSoft/"
+    $target = Join-Path $repoRoot "dist\SentiSoft-RusEmoLex"
+    Copy-Item (Join-Path $stageDist "SentiSoft-RusEmoLex") (Join-Path $repoRoot "dist") -Recurse -Force
+    Write-Host "Build complete (onedir): $target"
 }
+Write-Host "NTFS staging retained: $stageRoot"

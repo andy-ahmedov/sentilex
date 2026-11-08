@@ -1,5 +1,4 @@
 param(
-    [string]$NrcPath = "",
     [string]$ReportName = "frozen-smoke",
     [string]$ExePath = ""
 )
@@ -8,17 +7,17 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath
 $sourceDir = Join-Path $repoRoot "dist"
 $exeDir = Join-Path $env:LOCALAPPDATA "SentilexBuild\smoke-$ReportName"
 New-Item -ItemType Directory -Force -Path $exeDir | Out-Null
-$exe = Join-Path $exeDir "SentiSoft.exe"
-if (-not $ExePath) { $ExePath = Join-Path $sourceDir "SentiSoft.exe" }
+$exe = Join-Path $exeDir "SentiSoft-RusEmoLex.exe"
+if (-not $ExePath) { $ExePath = Join-Path $sourceDir "SentiSoft-RusEmoLex.exe" }
 Copy-Item -LiteralPath $ExePath -Destination $exe -Force
 $report = Join-Path $exeDir "$ReportName.json"
 if (Test-Path $report) { Remove-Item $report }
-$keys = @("SENTILEX_SMOKE_INPUT", "SENTILEX_SMOKE_NRC", "SENTILEX_SMOKE_REPORT")
+$keys = @("SENTILEX_SMOKE_INPUT", "SENTILEX_SMOKE_OFFLINE", "SENTILEX_SMOKE_REPORT")
 $saved = @{}
 foreach ($key in $keys) { $saved[$key] = [Environment]::GetEnvironmentVariable($key, "Process") }
 try {
     $env:SENTILEX_SMOKE_INPUT = Join-Path $repoRoot "texts\chast__7.txt"
-    $env:SENTILEX_SMOKE_NRC = $NrcPath
+    $env:SENTILEX_SMOKE_OFFLINE = "1"
     $env:SENTILEX_SMOKE_REPORT = $report
     $process = Start-Process -FilePath $exe -WorkingDirectory $exeDir -PassThru
     if (-not $process.WaitForExit(180000)) {
@@ -29,10 +28,15 @@ try {
     $data = Get-Content $report -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($data.error) { throw $data.error }
     $paths = @($data.result_txt, $data.result_png, $data.result_py)
-    if ($NrcPath) {
-        if (-not $data.emotions) { throw "Missing emotion outputs" }
-        $paths += @($data.emotions.png, $data.emotions.txt, $data.emotions.csv, $data.emotions.html)
-    } elseif ($data.emotions) { throw "Unexpected emotion outputs without NRC" }
+    if (-not $data.emotions) { throw "Missing built-in RusEmoLex outputs" }
+    $paths += @($data.emotions.png, $data.emotions.txt, $data.emotions.csv, $data.emotions.html,
+                $data.emotions.density_png, $data.emotions.sentences_csv)
+    if ($data.dictionary.entries -ne 1024 -or $data.dictionary.categories.Count -ne 5 -or
+        -not $data.dictionary.source_exists -or -not $data.dictionary.checksum_exists -or
+        -not $data.dictionary.offline -or
+        $data.dictionary.sha256 -ne "46861144c5b04d5f139fcea87ecbc6164e20ae325a2607787414d1336cae8c55") {
+        throw "Bundled dictionary provenance/offline verification failed"
+    }
     foreach ($path in $paths) {
         $resolved = Join-Path $exeDir $path
         if (-not (Test-Path $resolved) -or (Get-Item $resolved).Length -eq 0) { throw "Missing or empty output: $resolved" }
@@ -42,10 +46,9 @@ try {
     if ($actual -cne $expected) { throw "Frozen TXT differs from golden baseline (after CRLF normalization)" }
     Copy-Item $report (Join-Path $sourceDir "$ReportName.json") -Force
     Copy-Item (Join-Path $exeDir "$ReportName.png") (Join-Path $sourceDir "$ReportName.png") -Force
-    if ($NrcPath) {
-        Copy-Item (Join-Path $exeDir "${ReportName}_markers.png") (Join-Path $sourceDir "${ReportName}_markers.png") -Force
-    }
-    Write-Host "[smoke-frozen] OK: real exe worker/UI and golden TXT; NRC enabled: $([bool]$NrcPath)"
+    Copy-Item (Join-Path $exeDir "${ReportName}_markers.png") (Join-Path $sourceDir "${ReportName}_markers.png") -Force
+    Copy-Item (Join-Path $exeDir "${ReportName}_density.png") (Join-Path $sourceDir "${ReportName}_density.png") -Force
+    Write-Host "[smoke-frozen] OK: real offline exe worker/UI, bundled RusEmoLex, six emotion artifacts and golden TXT"
 } finally {
     foreach ($key in $keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key], "Process") }
 }

@@ -2,6 +2,9 @@
 
 from pathlib import Path
 import os
+import json
+from datetime import datetime, timezone
+import tempfile
 import pymorphy2_dicts_ru
 from PyInstaller.utils.hooks import copy_metadata
 
@@ -9,7 +12,15 @@ project_root = Path(SPECPATH).resolve().parent
 block_cipher = None
 onefile = os.environ.get("SENTILEX_ONEFILE", "0") == "1"
 pymorph_data = Path(pymorphy2_dicts_ru.get_path())
+metadata_dir = Path(tempfile.mkdtemp(prefix="sentilex-build-info-"))
+build_info = metadata_dir / "build_info.json"
+build_info.write_text(json.dumps({
+    "build_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+    "dictionary": "RusEmoLex", "edition": "RusEmoLex-density",
+}), encoding="utf-8")
 datas = [
+    (str(build_info), "desktop"),
+    (str(project_root / "scripts" / "data"), "scripts/data"),
     (str(project_root / "desktop" / "ui" / "main.ui"), "desktop/ui"),
     (str(project_root / "desktop" / "style.qss"), "desktop"),
     (str(project_root / "scripts" / "RuSentilex-2017.txt"), "scripts"),
@@ -43,7 +54,7 @@ if onefile:
         analysis.zipfiles,
         analysis.datas,
         [],
-        name="SentiSoft",
+        name="SentiSoft-RusEmoLex",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -63,7 +74,7 @@ else:
         analysis.scripts,
         [],
         exclude_binaries=True,
-        name="SentiSoft",
+        name="SentiSoft-RusEmoLex",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -83,5 +94,5 @@ else:
         strip=False,
         upx=True,
         upx_exclude=[],
-        name="SentiSoft",
+        name="SentiSoft-RusEmoLex",
     )

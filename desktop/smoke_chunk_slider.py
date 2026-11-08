@@ -33,6 +33,9 @@ def validate_case(
     window.show()
     app.processEvents()
 
+    assert not controller.chunk_slider.isEnabled() and not controller.chunk_number.isEnabled()
+    assert controller.chunk_min_label.text() == '1' and controller.chunk_max_label.text() == '—'
+    assert controller.chunk_number.value() == 1
     controller._configure_chunk_slider(sentence_count)
     app.processEvents()
 
@@ -78,6 +81,8 @@ def validate_case(
     assert controller.allowed_chunk_sizes[controller.chunk_slider.value()] == chosen
     controller.chunk_slider.setValue(0)
     assert controller.chunk_number.value() == controller.allowed_chunk_sizes[0]
+    controller._configure_chunk_slider(7)
+    assert controller.chunk_number.value() == 1
     controller._configure_chunk_slider(0)
     assert not controller.chunk_number.isEnabled()
     window.close()
@@ -88,10 +93,10 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    validate_case(app, 7, [1, 2, 3, 4, 5, 6, 7], 7)
-    validate_case(app, 50, list(range(1, 10)) + [10, 20, 30, 40, 50], 50)
-    validate_case(app, 94, list(range(1, 10)) + list(range(10, 91, 10)) + [94], 50)
-    validate_case(app, 237, list(range(1, 10)) + list(range(10, 231, 10)) + [237], 50)
+    validate_case(app, 7, [1, 2, 3, 4, 5, 6, 7], 1)
+    validate_case(app, 50, list(range(1, 10)) + [10, 20, 30, 40, 50], 1)
+    validate_case(app, 94, list(range(1, 10)) + list(range(10, 91, 10)) + [94], 1)
+    validate_case(app, 237, list(range(1, 10)) + list(range(10, 231, 10)) + [237], 1)
     validate_case(app, 1, [1], 1)
 
     print("[smoke-chunk] OK: chunk slider reflects sentence-count-based options")

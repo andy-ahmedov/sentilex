@@ -357,20 +357,20 @@
                    <item>
                     <widget class="QLabel" name="chunkMinLabel">
                      <property name="text">
-                      <string>10</string>
+                      <string>1</string>
                      </property>
                     </widget>
                    </item>
                    <item>
                     <widget class="QSlider" name="chunkSizeSlider">
                      <property name="minimum">
-                      <number>10</number>
+                      <number>0</number>
                      </property>
                      <property name="maximum">
-                      <number>500</number>
+                      <number>0</number>
                      </property>
                      <property name="value">
-                      <number>50</number>
+                      <number>0</number>
                      </property>
                      <property name="orientation">
                       <enum>Qt::Horizontal</enum>
@@ -380,7 +380,7 @@
                    <item>
                     <widget class="QLabel" name="chunkMaxLabel">
                      <property name="text">
-                      <string>500</string>
+                      <string>—</string>
                      </property>
                     </widget>
                    </item>
@@ -389,7 +389,7 @@
                  <item>
                  <widget class="QLabel" name="chunkCurrentLabel">
                    <property name="text">
-                    <string>Текущее значение: 50</string>
+                    <string>Текущее значение: недоступно</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignCenter</set>
@@ -456,7 +456,7 @@
                  <item>
                   <widget class="QLabel" name="statusLabel">
                    <property name="text">
-                    <string>Состояние: idle</string>
+                    <string>Состояние: ожидание файла</string>
                    </property>
                   </widget>
                  </item>
