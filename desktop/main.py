@@ -234,11 +234,11 @@ class MainWindowController(QObject):
         from scripts import emotions
         self.emotion_profile = QComboBox()
         self.emotion_profile.setObjectName("emotionDictionaryProfile")
-        for key in ('literary', 'raw'):
+        for key in ('literary', 'literary_v1', 'raw'):
             self.emotion_profile.addItem(emotions.PROFILE_LABELS[key], key)
         self.emotion_profile.setToolTip(
-            "Правки для прозы v1: явные ошибки перевода и служебные слова. "
-            "Исходный перевод оставлен для сравнения. После смены повторите анализ.")
+            "Правки для прозы v2: уточнённые переводы по значениям NRC. "
+            "Версия v1 и исходный перевод оставлены для сравнения. После смены повторите анализ.")
         profile_label = QLabel("Профиль эмоционального словаря")
         profile_label.setStyleSheet("color:#483d65; background:transparent;")
         self.control_panel.layout().addWidget(profile_label)
@@ -247,15 +247,15 @@ class MainWindowController(QObject):
         self.emotion_save_buttons = {}
         import json
         info = json.loads(resource_path('desktop', 'build_info.json').read_text(encoding='utf-8'))
-        self.version_label = QLabel(f'NRC 2022 · правки для прозы v1 · сборка {info["build_date"]}')
+        self.version_label = QLabel(f'NRC 2022 · правки для прозы v2 · сборка {info["build_date"]}')
         self.version_label.setWordWrap(True)
         self.version_label.setStyleSheet("color:#483d65; background:transparent;")
         self.version_label.setToolTip(
-            "NRC EmoLex: восемь эмоций; доступны исправленный v1 и исходный профиль. Saif M. Mohammad, Peter D. Turney; NRC Canada. "
+            "NRC EmoLex: восемь эмоций; доступны правки v2, v1 и исходный профиль. Saif M. Mohammad, Peter D. Turney; NRC Canada. "
             "Русский перевод: Google Translate, август 2022. Контекст, отрицания и ирония не учитываются. "
             "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
         self.control_panel.layout().addWidget(self.version_label)
-        self.window.setWindowTitle(f'SentiSoft · NRC2022-Literary · {info["build_date"]}')
+        self.window.setWindowTitle(f'SentiSoft · NRC2022-Literary-v2 · {info["build_date"]}')
         self.plot_tabs = QTabWidget()
         self.plot_tabs.setStyleSheet("QTabWidget::pane {background:#faf9ff; border:1px solid #d8ccff;} QTabBar::tab {background:#eee8ff; color:#5632c3; padding:7px 14px;} QTabBar::tab:selected {background:#faf9ff; font-weight:bold;} QWidget {background:#faf9ff; color:#483d65;} QPushButton {background:#eee8ff; color:#5632c3; border:1px solid #d8ccff; border-radius:8px; padding:6px;}")
         index = self.results_splitter.indexOf(self.plot_preview)

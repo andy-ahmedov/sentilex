@@ -1,0 +1,324 @@
+{
+  "id": "nrc-ru-literary-v2",
+  "version": 2,
+  "label": "NRC 2022 — правки для прозы (v2)",
+  "source_sha256": "96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a",
+  "base_profile": "literary_v1",
+  "base_profile_sha256": "cbd2607a69f63549552956dd71ffb56f2ba99b76531646438499edae274a29e7",
+  "scope": "Более глубокая редактура переводов по исходным смысловым группам NRC для прозы в целом; без текстовых частот и без изменения эмоциональных меток.",
+  "excluded_single_tokens": [
+    "что",
+    "несмотря",
+    "против",
+    "исключая"
+  ],
+  "single_token_reason": "Наследуется закрытый однословный список v1; слова внутри выражений не удаляются.",
+  "entry_edits": [
+    {
+      "english": "cabinet",
+      "expected_russian": "кабинет",
+      "expected_emotions": [
+        "trust"
+      ],
+      "action": "replace",
+      "reason": "council: правительство, а не комната или мебель.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "кабинет министров"
+    },
+    {
+      "english": "content",
+      "expected_russian": "содержание",
+      "expected_emotions": [
+        "joy",
+        "trust"
+      ],
+      "action": "replace",
+      "reason": "contentment/ease/pleasure: удовлетворённость, а не содержание документа.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "довольный"
+    },
+    {
+      "english": "court",
+      "expected_russian": "корт",
+      "expected_emotions": [
+        "anger",
+        "fear",
+        "anticipation"
+      ],
+      "action": "replace",
+      "reason": "legality/tribunal/law: судебное значение, а не спортивный корт.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "суд"
+    },
+    {
+      "english": "general",
+      "expected_russian": "Генеральная",
+      "expected_emotions": [
+        "trust"
+      ],
+      "action": "replace",
+      "reason": "master: личный военный титул, а не отвлечённое женское прилагательное генеральная.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "генерал"
+    },
+    {
+      "english": "gross",
+      "expected_russian": "валовой",
+      "expected_emotions": [
+        "disgust"
+      ],
+      "action": "replace",
+      "reason": "vice/heinous/infamous: неприятный/предосудительный смысл, а не финансовый валовой.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "отвратительный"
+    },
+    {
+      "english": "hail",
+      "expected_russian": "град",
+      "expected_emotions": [
+        "trust"
+      ],
+      "action": "replace",
+      "reason": "respect/worship/salute: приветствие/чествование, а не метеорологический град.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "приветствовать"
+    },
+    {
+      "english": "horror",
+      "expected_russian": "ужастик",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "fear",
+        "surprise",
+        "disgust"
+      ],
+      "action": "replace",
+      "reason": "fear/dislike: переживание, а не узкое название жанра ужастик.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "ужас"
+    },
+    {
+      "english": "lonely",
+      "expected_russian": "Одинокий, уединенный",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "fear",
+        "disgust"
+      ],
+      "action": "replace",
+      "reason": "seclusion/unity с отрицательными метками: одиночество; перечень двух переводов не является одной фразой. Уединённый не добавляется из-за допустимого спокойного уединения.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "одинокий"
+    },
+    {
+      "english": "mad",
+      "expected_russian": "без ума",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "fear",
+        "disgust"
+      ],
+      "action": "replace",
+      "reason": "insanity: безумие, а не оборот без ума, который в прозе может выражать влюблённость или восторг.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "безумный"
+    },
+    {
+      "english": "pine",
+      "expected_russian": "сосна",
+      "expected_emotions": [
+        "sadness"
+      ],
+      "action": "replace",
+      "reason": "disease/ail, despair/yearn: глагольное страдание, а не название дерева.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "чахнуть"
+    },
+    {
+      "english": "pound",
+      "expected_russian": "фунт",
+      "expected_emotions": [
+        "anger"
+      ],
+      "action": "replace",
+      "reason": "bruise/file/scrape: действие удара, а не денежная единица/мера веса.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "колотить"
+    },
+    {
+      "english": "resigned",
+      "expected_russian": "подал в отставку",
+      "expected_emotions": [
+        "sadness"
+      ],
+      "action": "replace",
+      "reason": "humility/submission: смирение, а не буквальная отставка.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "смирившийся"
+    },
+    {
+      "english": "rue",
+      "expected_russian": "улица",
+      "expected_emotions": [
+        "sadness"
+      ],
+      "action": "replace",
+      "reason": "regret/penitence: сожаление; улица является французским соответствием, не этим английским значением.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "сожалеть"
+    },
+    {
+      "english": "shrink",
+      "expected_russian": "сокращаться, сжиматься",
+      "expected_emotions": [
+        "sadness",
+        "fear"
+      ],
+      "action": "replace",
+      "reason": "fear/shy/wince: сжиматься от страха; сужение к эмоциональному чтению вместо перечня общих размерных глаголов.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "съёживаться"
+    },
+    {
+      "english": "terrific",
+      "expected_russian": "потрясающий",
+      "expected_emotions": [
+        "sadness"
+      ],
+      "action": "replace",
+      "reason": "grim/crushing/appalling: отрицательное чтение исходной разметки, а не современная положительная похвала потрясающий.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "ужасающий"
+    },
+    {
+      "english": "word",
+      "expected_russian": "слово",
+      "expected_emotions": [
+        "trust"
+      ],
+      "action": "replace",
+      "reason": "promise/vow/parole: данное слово/обещание, а не любая единица речи.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russian": "обещание"
+    },
+    {
+      "english": "suddenly",
+      "expected_russian": "вдруг, внезапно",
+      "expected_emotions": [
+        "surprise"
+      ],
+      "action": "replace",
+      "reason": "earliness/inexpectation/instantaneity: два альтернативных наречных перевода, а не обязательная двухсловная фраза.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ],
+      "russians": [
+        "вдруг",
+        "внезапно"
+      ]
+    },
+    {
+      "english": "cross",
+      "expected_russian": "Пересекать",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "fear"
+      ],
+      "action": "exclude",
+      "reason": "Исходное painful-чтение нельзя переносить на нейтральный глагол пересекать. Исключение строки вместо догадки о прилагательном сердитый или религиозном кресте.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ]
+    },
+    {
+      "english": "execution",
+      "expected_russian": "исполнение",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "fear",
+        "trust"
+      ],
+      "action": "exclude",
+      "reason": "Источник объединяет completion/performance и punishment/crucifixion с разными эмоциями. Перенос общего набора на любое исполнение или только на казнь не обоснован; строка исключена без переназначения меток.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ]
+    },
+    {
+      "english": "tender",
+      "expected_russian": "тендер",
+      "expected_emotions": [
+        "joy",
+        "trust"
+      ],
+      "action": "exclude",
+      "reason": "Исходная эмоциональная группа offer/present/invite не доказывает перенос joy/trust на финансовый тендер. Не заменяем на нежный, поскольку такое чтение не подтверждено размеченной группой.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ]
+    },
+    {
+      "english": "treat",
+      "expected_russian": "удовольствие",
+      "expected_emotions": [
+        "anger",
+        "sadness",
+        "joy",
+        "fear",
+        "surprise",
+        "anticipation",
+        "disgust",
+        "trust"
+      ],
+      "action": "exclude",
+      "reason": "Все восемь эмоций агрегированы по conduct/dispatch/discharge и другим значениям. Перенос всего набора на удовольствие создаёт противоречивую русскую метку; без разметки значений строка исключена.",
+      "references": [
+        "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm"
+      ]
+    }
+  ],
+  "sense_evidence": {
+    "archive_sha256": "4edcbd00b1d38ace19ecebca17a50ce08719785b9476cd12d31532eff0fc34e6",
+    "member": "NRC-Emotion-Lexicon/NRC-Emotion-Lexicon-Senselevel-v0.92.txt",
+    "sha256": "6a17bbbbbb3a84fd966506b2f5e3f693380a7e92241929ac0e26139780bffc9d",
+    "url": "https://saifmohammad.com/WebDocs/Lexicons/NRC-Emotion-Lexicon.zip",
+    "use": "Размеченные группы значений служат проверкой выбранного перевода; эмоциональные метки строк не переразмечаются."
+  }
+}

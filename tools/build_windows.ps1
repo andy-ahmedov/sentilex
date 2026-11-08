@@ -116,13 +116,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($OneFile) {
-    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022-Literary.exe"
-    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022-Literary.exe") $target -Force
+    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022-Literary-v2.exe"
+    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022-Literary-v2.exe") $target -Force
     Write-Host "Build complete (onefile): $target"
 }
 else {
-    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022-Literary"
-    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022-Literary") (Join-Path $repoRoot "dist") -Recurse -Force
+    $target = Join-Path $repoRoot "dist\SentiSoft-NRC2022-Literary-v2"
+    Copy-Item (Join-Path $stageDist "SentiSoft-NRC2022-Literary-v2") (Join-Path $repoRoot "dist") -Recurse -Force
     Write-Host "Build complete (onedir): $target"
 }
 Write-Host "NTFS staging retained: $stageRoot"

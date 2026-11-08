@@ -16,7 +16,7 @@ def main():
     original = emotions.LEXICON_PATH.read_bytes()
     rows = list(csv.DictReader(original.decode().splitlines(), delimiter='\t'))
     before = deepcopy(rows)
-    revised, changes = emotions.apply_literary_profile(rows)
+    revised, changes = emotions.apply_literary_profile(rows, profile='literary_v1')
     assert rows == before, 'Original rows were mutated'
     actions = {c['english']: c['action'] for c in changes}
     assert actions == {'wot': 'exclude', 'aga': 'exclude', 'spite': 'replace',
@@ -36,15 +36,16 @@ def main():
     broken = deepcopy(rows)
     next(r for r in broken if r['English Word'] == 'spite')['Russian Word'] = 'другой перевод'
     try:
-        emotions.apply_literary_profile(broken)
+        emotions.apply_literary_profile(broken, profile='literary_v1')
     except ValueError:
         pass
     else:
         raise AssertionError('Mismatched source accepted')
     raw, raw_digest = emotions.load_lexicon(morph, profile='raw')
-    edited, digest = emotions.load_lexicon(morph, profile='literary')
+    edited, digest = emotions.load_lexicon(morph, profile='literary_v1')
     default, _ = emotions.load_lexicon(morph)
-    assert default == edited and digest == raw_digest == emotions.SOURCE_SHA256
+    assert digest == raw_digest == emotions.SOURCE_SHA256
+    assert default == emotions.load_lexicon(morph, profile='literary')[0]
     assert set.union(*edited.values()) == set(range(8))
     def key(text):
         return tuple(emotions.tokens(text, morph, {}))
@@ -59,7 +60,7 @@ def main():
     toy = [{'English Word': 'fixture', 'Russian Word': 'против воли',
             **{k: '1' if k == 'fear' else '0' for k in emotions.KEYS}}]
     complete = rows + toy
-    preserved, _ = emotions.apply_literary_profile(complete)
+    preserved, _ = emotions.apply_literary_profile(complete, profile='literary_v1')
     assert any(r['English Word'] == 'fixture' for r in preserved)
     # Grammar and short prose examples are independent of any particular novel.
     for text in ('Что?', 'Ага.', 'Несмотря.', 'Против.', 'Исключая.', 'Ничто.'):
@@ -85,11 +86,11 @@ def main():
     negative = emotions.count_chunks(['Он не был счастлив.'], 1, simple, morph)[0]
     assert positive['counts'] == negative['counts'], 'Generic negation inference was introduced'
     assert negative['words'] == positive['words'] + 1
-    info = emotions.profile_metadata('literary')
+    info = emotions.profile_metadata('literary_v1')
     assert info['id'] == 'nrc-ru-literary-v1' and len(info['sha256']) == 64
     assert emotions.profile_metadata('raw')['sha256'] == raw_digest
     with tempfile.TemporaryDirectory() as folder:
-        for profile, lexicon in (('raw', raw), ('literary', edited)):
+        for profile, lexicon in (('raw', raw), ('literary_v1', edited)):
             paths = emotions.write_results(cases, [0.] * len(cases), 2, lexicon,
                                            digest, morph, Path(folder) / profile, profile=profile)
             for kind in ('txt', 'html'):

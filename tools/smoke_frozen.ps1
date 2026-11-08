@@ -1,7 +1,7 @@
 param(
     [string]$ReportName = "frozen-smoke",
     [string]$ExePath = "",
-    [ValidateSet("literary", "raw")]
+    [ValidateSet("literary", "literary_v1", "raw")]
     [string]$Profile = "literary"
 )
 $ErrorActionPreference = "Stop"
@@ -9,8 +9,8 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath
 $sourceDir = Join-Path $repoRoot "dist"
 $exeDir = Join-Path $env:LOCALAPPDATA "SentilexBuild\smoke-$ReportName"
 New-Item -ItemType Directory -Force -Path $exeDir | Out-Null
-$exe = Join-Path $exeDir "SentiSoft-NRC2022-Literary.exe"
-if (-not $ExePath) { $ExePath = Join-Path $sourceDir "SentiSoft-NRC2022-Literary.exe" }
+$exe = Join-Path $exeDir "SentiSoft-NRC2022-Literary-v2.exe"
+if (-not $ExePath) { $ExePath = Join-Path $sourceDir "SentiSoft-NRC2022-Literary-v2.exe" }
 Copy-Item -LiteralPath $ExePath -Destination $exe -Force
 $report = Join-Path $exeDir "$ReportName.json"
 if (Test-Path $report) { Remove-Item $report }
@@ -44,6 +44,10 @@ try {
     }
     $profileId = "nrc-ru-literary-v1"
     $profileHash = "cbd2607a69f63549552956dd71ffb56f2ba99b76531646438499edae274a29e7"
+    if ($Profile -eq "literary") {
+        $profileId = "nrc-ru-literary-v2"
+        $profileHash = "119bc130f86078a77053ddf1add6445cfd956e8ceac685fba0c2a9f95b311f6a"
+    }
     if ($Profile -eq "raw") {
         $profileId = "nrc-ru-2022-raw"
         $profileHash = "96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a"

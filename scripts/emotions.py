@@ -53,18 +53,30 @@ def normalize_entries(rows, morph):
 
 
 LITERARY_PROFILE_PATH = DATA_DIR / 'NRC2022.LITERARY.json'
+PROFILE_PATHS = {
+    'literary': DATA_DIR / 'NRC2022.LITERARY.v2.json',
+    'literary_v1': LITERARY_PROFILE_PATH,
+}
 DEFAULT_PROFILE = 'literary'
 PROFILE_LABELS = {
-    'literary': 'NRC 2022 — правки для прозы (v1)',
+    'literary': 'NRC 2022 — правки для прозы (v2)',
+    'literary_v1': 'NRC 2022 — правки для прозы (v1)',
     'raw': 'NRC 2022 — исходный перевод',
 }
 
 
-def read_literary_profile():
-    rules = json.loads(LITERARY_PROFILE_PATH.read_text(encoding='utf-8'))
+def read_literary_profile(profile=DEFAULT_PROFILE):
+    if profile not in PROFILE_PATHS:
+        raise ValueError(f'Неизвестный профиль словаря: {profile}')
+    rules = json.loads(PROFILE_PATHS[profile].read_text(encoding='utf-8'))
+    version = 2 if profile == 'literary' else 1
     if (rules['source_sha256'] != SOURCE_SHA256
-            or rules['id'] != 'nrc-ru-literary-v1' or rules['version'] != 1):
+            or rules['id'] != f'nrc-ru-literary-v{version}' or rules['version'] != version):
         raise ValueError('Профиль правок не соответствует версии словаря')
+    if version == 2:
+        if (rules.get('base_profile') != 'literary_v1'
+                or profile_metadata('literary_v1')['sha256'] != rules['base_profile_sha256']):
+            raise ValueError('Исходный профиль v1 изменён; v2 не может быть воспроизведён')
     return rules
 
 
@@ -72,27 +84,29 @@ def profile_metadata(profile=DEFAULT_PROFILE):
     if profile == 'raw':
         return dict(id='nrc-ru-2022-raw', label=PROFILE_LABELS['raw'],
                     sha256=SOURCE_SHA256, source_sha256=SOURCE_SHA256)
-    if profile != 'literary':
-        raise ValueError(f'Неизвестный профиль словаря: {profile}')
-    rules = read_literary_profile()
+    rules = read_literary_profile(profile)
     canonical = json.dumps(rules, ensure_ascii=False, sort_keys=True,
                            separators=(',', ':')).encode('utf-8')
     return dict(id=rules['id'], label=rules['label'],
                 sha256=hashlib.sha256(canonical).hexdigest(), source_sha256=SOURCE_SHA256)
 
 
-def apply_literary_profile(rows):
-    """Apply guarded source-row corrections before normalization/category union."""
-    rules = read_literary_profile()
+def apply_literary_profile(rows, profile=DEFAULT_PROFILE):
+    """Apply guarded translations; alternatives are separate entries, not a phrase."""
+    rules = read_literary_profile(profile)
+    changes = []
+    if rules.get('base_profile'):
+        rows, changes = apply_literary_profile(rows, rules['base_profile'])
     edits = {entry['english']: entry for entry in rules['entry_edits']}
     if len(edits) != len(rules['entry_edits']):
         raise ValueError('Повторная правка одной исходной записи')
     excluded = set(rules['excluded_single_tokens'])
-    revised, changes, found = [], [], set()
+    revised, found = [], set()
     for original in rows:
         row = dict(original)
         english = row['English Word']
         entry = edits.get(english)
+        variants = [row['Russian Word']]
         if entry:
             actual = {key for key in KEYS if row[key] == '1'}
             if (english in found or row['Russian Word'] != entry['expected_russian']
@@ -101,22 +115,27 @@ def apply_literary_profile(rows):
             found.add(english)
             if entry['action'] not in ('exclude', 'replace'):
                 raise ValueError(f'Неизвестное действие правки: {english}')
+            if entry['action'] == 'replace':
+                variants = entry.get('russians', [entry.get('russian')])
+                if (not isinstance(variants, list) or not variants
+                        or len(variants) != len(set(v for v in variants if isinstance(v, str)))
+                        or any(not isinstance(v, str) or not TOKEN.search(v) for v in variants)):
+                    raise ValueError(f'Некорректные исправленные соответствия: {english}')
             changes.append(dict(english=english, before=row['Russian Word'],
-                                after=entry.get('russian'), action=entry['action'],
-                                rule='entry', reason=entry['reason']))
+                                after=(variants if 'russians' in entry else entry.get('russian')),
+                                action=entry['action'], rule='entry', reason=entry['reason'],
+                                profile_id=rules['id']))
             if entry['action'] == 'exclude':
                 continue
-            if not entry.get('russian') or not TOKEN.search(entry['russian']):
-                raise ValueError(f'Пустое исправленное соответствие: {english}')
-            row['Russian Word'] = entry['russian']
-        surface = TOKEN.findall(row['Russian Word'].lower().replace('ё', 'е'))
-        if (len(surface) == 1 and surface[0] in excluded
-                and any(row[key] == '1' for key in KEYS)):
-            changes.append(dict(english=english, before=row['Russian Word'], after=None,
-                                action='exclude', rule='single_function_token',
-                                reason=rules['single_token_reason']))
-            continue
-        revised.append(row)
+        for variant in variants:
+            surface = TOKEN.findall(variant.lower().replace('ё', 'е'))
+            if (len(surface) == 1 and surface[0] in excluded
+                    and any(row[key] == '1' for key in KEYS)):
+                changes.append(dict(english=english, before=variant, after=None, action='exclude',
+                                    rule='single_function_token', reason=rules['single_token_reason'],
+                                    profile_id=rules['id']))
+                continue
+            revised.append({**row, 'Russian Word': variant})
     missing = set(edits) - found
     if missing:
         raise ValueError('Не найдены исходные записи для правок: ' + ', '.join(sorted(missing)))
@@ -139,8 +158,8 @@ def load_lexicon(morph, profile=DEFAULT_PROFILE):
             or any(row[key] not in ('0', '1') for row in rows for key in KEYS)
             or any(not any(row[key] == '1' for row in rows) for key in KEYS)):
         raise ValueError('Неверный состав встроенного NRC EmoLex 2022')
-    if profile == 'literary':
-        rows, _ = apply_literary_profile(rows)
+    if profile in PROFILE_PATHS:
+        rows, _ = apply_literary_profile(rows, profile)
     elif profile != 'raw':
         raise ValueError(f'Неизвестный профиль словаря: {profile}')
     return normalize_entries(rows, morph), digest

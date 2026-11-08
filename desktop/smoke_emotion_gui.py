@@ -56,7 +56,7 @@ try:
     assert 'NRC2022' in window.windowTitle()
     assert not hasattr(controller, 'emotion_path') and not hasattr(controller, 'nrc_button')
     assert not controller.chunk_number.isEnabled() and not controller.chunk_slider.isEnabled()
-    window.grab().save('/tmp/sentilex-nrc-literary-start.png')
+    window.grab().save('/tmp/sentilex-nrc-v2-start.png')
     with tempfile.TemporaryDirectory() as folder:
         source = Path(folder) / 'nrc2022_gui.txt'
         source.write_text('Я боюсь. Радость и счастье. Стол и окно.', encoding='utf-8')
@@ -83,10 +83,10 @@ try:
             app.processEvents()
             controller.content_scroll_area.verticalScrollBar().setValue(controller.content_scroll_area.verticalScrollBar().maximum())
             app.processEvents()
-            window.grab().save(f'/tmp/sentilex-nrc-literary-{name}-gui.png')
+            window.grab().save(f'/tmp/sentilex-nrc-v2-{name}-gui.png')
         assert not controller.emotion_preview.pixmap().isNull()
         assert not controller.density_preview.pixmap().isNull()
-        assert 'nrc-ru-literary-v1' in controller.emotion_report.toPlainText()
+        assert 'nrc-ru-literary-v2' in controller.emotion_report.toPlainText()
         assert 'Google Translate, август 2022' in controller.emotion_report.toPlainText()
         assert 'Доверие' in controller.emotion_report.toPlainText()
         first = {k: Path(p).stat().st_mtime_ns for k, p in controller.emotion_results.items()}
@@ -95,6 +95,10 @@ try:
         assert all(Path(p).stat().st_mtime_ns > first[k] for k, p in controller.emotion_results.items())
         assert 'Фрагмент 2' in controller.emotion_report.toPlainText()
         assert 'Фрагмент 3' not in controller.emotion_report.toPlainText()
+        controller.emotion_profile.setCurrentIndex(controller.emotion_profile.findData('literary_v1'))
+        assert not controller.emotion_results
+        analyze(1)
+        assert 'nrc-ru-literary-v1' in controller.emotion_report.toPlainText()
         controller.emotion_profile.setCurrentIndex(controller.emotion_profile.findData('raw'))
         assert not controller.emotion_results
         assert all(not b.isEnabled() for b in controller.emotion_save_buttons.values())
@@ -102,7 +106,7 @@ try:
         assert 'nrc-ru-2022-raw' in controller.emotion_report.toPlainText()
         controller.emotion_profile.setCurrentIndex(controller.emotion_profile.findData('literary'))
         analyze(2)
-        assert 'nrc-ru-literary-v1' in controller.emotion_report.toPlainText()
+        assert 'nrc-ru-literary-v2' in controller.emotion_report.toPlainText()
         # Failure after creating one partial artifact must remove all emotion files.
         stale_paths = list(controller.emotion_results.values())
         def fail(*args):
@@ -129,7 +133,7 @@ try:
             for index, name in ((1, 'chapter-clusters'), (2, 'chapter-density'), (3, 'chapter-markers')):
                 controller.plot_tabs.setCurrentIndex(index)
                 app.processEvents()
-                window.grab().save(f'/tmp/sentilex-nrc-literary-{name}-gui.png')
+                window.grab().save(f'/tmp/sentilex-nrc-v2-{name}-gui.png')
         dense = Path(folder) / 'nrc2022_dense.txt'
         dense.write_text(' '.join(['Злость грусть радость страх удивление.'] * 240), encoding='utf-8')
         choose(dense)
@@ -137,7 +141,7 @@ try:
         assert controller.emotion_results
         controller.plot_tabs.setCurrentIndex(2)
         app.processEvents()
-        window.grab().save('/tmp/sentilex-nrc-literary-dense-gui.png')
+        window.grab().save('/tmp/sentilex-nrc-v2-dense-gui.png')
 finally:
     print("Closing GUI", flush=True)
     controller.shutdown()
