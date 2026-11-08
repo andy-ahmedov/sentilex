@@ -1,21 +1,26 @@
-"""Optional desktop NRC EmoLex analysis; dictionary data stays external."""
+"""Desktop RusEmoLex markers and word-normalized emotion densities."""
 import csv
 import hashlib
 from html import escape
-import io
 from pathlib import Path
 import re
-import zipfile
 
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Rectangle
+from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import LinearSegmentedColormap
 
-KEYS = ('anger', 'anticipation', 'disgust', 'fear', 'joy', 'sadness', 'surprise', 'trust')
-LABELS = ('Гнев', 'Ожидание', 'Отвращение', 'Страх', 'Радость', 'Грусть', 'Удивление', 'Доверие')
-COLORS = ('#ee8585', '#ffc477', '#df8ad0', '#ad88d4', '#fff080', '#91c4f2', '#8de2e2', '#b3e580')
+KEYS = ('anger', 'sadness', 'joy', 'fear', 'surprise')
+LABELS = ('Злость', 'Грусть', 'Радость', 'Страх', 'Удивление')
+COLORS = ('#ee8585', '#91c4f2', '#fff080', '#ad88d4', '#8de2e2')
+DATA_DIR = Path(__file__).resolve().parent / 'data'
+SOURCE_COMMIT = 'b485f34def81f622295b28bd7e5558e3581a8a9e'
+SOURCE_URL = f'https://github.com/nl-pi/rusemolex/blob/{SOURCE_COMMIT}/RusEmoLex.csv'
+SOURCE_SHA256 = '46861144c5b04d5f139fcea87ecbc6164e20ae325a2607787414d1336cae8c55'
+PUBLICATION = 'https://doi.org/10.22363/2687-0088-44439'
+NO_MARKERS = 'Эмоциональные слова не найдены'
 TOKEN = re.compile(r'[^\W\d_]+', re.UNICODE)
 
 
@@ -28,36 +33,30 @@ def tokens(text, morph, cache):
     return result
 
 
-def load_lexicon(path, morph):
-    from openpyxl import load_workbook
-    data = Path(path).read_bytes()
+def normalize_entries(rows, morph):
+    """Union normalized classes; source occurrence counts are never weights."""
+    lexicon, cache = {}, {}
+    for row in rows:
+        category = LABELS.index(row['Класс'])
+        key = tuple(tokens(row['Слово'], morph, cache))
+        if key:
+            lexicon.setdefault(key, set()).add(category)
+    return lexicon
+
+
+def load_lexicon(morph):
+    data = (DATA_DIR / 'RusEmoLex.csv').read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    if Path(path).suffix.lower() == '.zip':
-        with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            names = [n for n in archive.namelist() if n.endswith('NRC-Emotion-Lexicon-v0.92-In105Languages-Nov2017Translations.xlsx') and '/Older Versions/' not in n and not n.startswith('__MACOSX/')]
-            if len(names) != 1:
-                raise ValueError('В архиве не найдена однозначная таблица NRC EmoLex 2017')
-            data = archive.read(names[0])
-    book = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
-    try:
-        rows = book.worksheets[0].iter_rows(values_only=True)
-        header = next(rows)
-        russian = header.index('Russian (ru)')
-        columns = [header.index(k.title()) for k in KEYS]
-        lexicon, cache = {}, {}
-        for row in rows:
-            word = row[russian]
-            if not isinstance(word, str) or not re.search('[а-яё]', word.lower()):
-                continue
-            categories = {i for i, col in enumerate(columns) if row[col] == 1}
-            key = tuple(tokens(word, morph, cache))
-            if key and categories:
-                lexicon.setdefault(key, set()).update(categories)
-        if not lexicon:
-            raise ValueError('Таблица не содержит русских эмоциональных маркеров')
-        return lexicon, digest
-    finally:
-        book.close()
+    if digest != SOURCE_SHA256:
+        raise ValueError('Встроенный словарь RusEmoLex повреждён')
+    rows = list(csv.DictReader(data.decode('utf-8-sig').splitlines(), delimiter=';'))
+    if len(rows) != 1024 or {row['Класс'] for row in rows} != set(LABELS):
+        raise ValueError('Неверный состав встроенного словаря RusEmoLex')
+    return normalize_entries(rows, morph), digest
+
+
+def densities(counts, words):
+    return [value / words if words else 0.0 for value in counts]
 
 
 def count_chunks(sentences, chunk_size, lexicon, morph):
@@ -66,14 +65,14 @@ def count_chunks(sentences, chunk_size, lexicon, morph):
     cache, chunks = {}, []
     lengths = sorted({len(k) for k in lexicon}, reverse=True)
     for start in range(0, len(sentences), chunk_size):
-        counts, words, details = [0] * 8, 0, []
+        counts, words, details = [0] * len(KEYS), 0, []
         for number, sentence in enumerate(sentences[start:start + chunk_size], start + 1):
             seq = tokens(sentence, morph, cache)
             # Track original character positions through lower-case expansion.
             positions = [i for i, char in enumerate(sentence)
                          for _ in char.lower()]
             spans = list(TOKEN.finditer(sentence.lower().replace('ё', 'е')))
-            sentence_counts, markers = [0] * 8, []
+            sentence_counts, markers = [0] * len(KEYS), []
             words += len(seq)
             pos = 0
             while pos < len(seq):
@@ -94,50 +93,71 @@ def count_chunks(sentences, chunk_size, lexicon, morph):
                     pos += 1
             counts = [a + b for a, b in zip(counts, sentence_counts)]
             details.append(dict(number=number, text=sentence, markers=markers,
-                                counts=sentence_counts,
-                                leaders=find_leaders(sentence_counts)))
+                                counts=sentence_counts, words=len(seq),
+                                densities=densities(sentence_counts, len(seq)),
+                                leaders=find_leaders(densities(sentence_counts, len(seq)))))
         end = min(start + chunk_size, len(sentences))
         chunks.append(dict(start=start + 1, end=end, words=words, counts=counts,
-                           leaders=find_leaders(counts), sentences=details))
+                           densities=densities(counts, words),
+                           leaders=find_leaders(densities(counts, words)), sentences=details))
     return chunks
 
 
 def find_leaders(counts):
-    maximum = max(counts)
+    maximum = max(counts, default=0)
     return [i for i, value in enumerate(counts) if value == maximum] if maximum else []
 
 
 def leader_names(leaders):
-    return ' / '.join(LABELS[i] for i in leaders) or 'Маркеры не найдены'
+    return ' / '.join(LABELS[i] for i in leaders) or NO_MARKERS
 
 
 def count_description(counts):
     return '; '.join(f'{label}: {value}' for label, value in zip(LABELS, counts))
 
 
-def marker_description(marker):
-    return (f'«{marker["text"]}» [{marker["lemma"]}] → '
-            + leader_names(marker['categories']))
+def marker_description(marker, detailed=False):
+    lemma = f' [{marker["lemma"]}]' if detailed else ''
+    return f'«{marker["text"]}»{lemma} → ' + leader_names(marker['categories'])
+
+
+def density_description(values):
+    return 'Маркеров на 100 слов: ' + '; '.join(
+        f'{label}: {100 * value:.2f}' for label, value in zip(LABELS, values))
+
+
+def leader_description(leaders):
+    title = 'Преобладающие эмоции' if len(leaders) > 1 else 'Преобладающая эмоция'
+    return title + ': ' + leader_names(leaders)
 
 
 def sentence_report(chunks):
     """Return TXT and escaped, offline HTML from the actual counting trace."""
-    intro = ('Лидеры предложения и фрагмента рассчитываются отдельно. '
-             'Маркеры не найдены — нет словарных совпадений, а не доказанное отсутствие эмоций. '
-             'Показан текст после предобработки; контекст и отрицания не интерпретируются.')
-    lines = ['Маркеры кластеров по предложениям', intro]
-    body = ['<h1>Эмоциональные кластеры — маркеры</h1>', f'<p>{escape(intro)}</p>']
+    intro = ('Выделены слова из эмоционального словаря. Под каждым предложением '
+             'указано, какие эмоции с ними связаны')
+    explanation = ('Показан текст после предобработки. Плотность — число маркеров '
+                   'категории на все слова; ниже она показана на 100 слов. '
+                   'Общий знаменатель позволяет сравнивать фрагменты разной длины, '
+                   'но не меняет преобладающую категорию внутри фрагмента. '
+                   'Контекст, отрицания и ирония не интерпретируются. '
+                   'Отсутствие совпадений не доказывает отсутствие эмоций.')
+    lines = [intro, explanation]
+    body = [f'<p>{escape(intro)}</p>', '<h1>Эмоциональные кластеры — маркеры</h1>',
+            f'<p>{escape(explanation)}</p>']
     for number, chunk in enumerate(chunks, 1):
         title = f'Фрагмент {number}: предложения {chunk["start"]}–{chunk["end"]}'
-        leaders = 'Лидеры фрагмента: ' + leader_names(chunk['leaders'])
-        counts = count_description(chunk['counts'])
-        lines.extend(['', title, leaders, counts])
-        body.extend([f'<h2>{escape(title)}</h2>', f'<p><b>{escape(leaders)}</b><br>{escape(counts)}</p>'])
+        leaders = leader_description(chunk['leaders'])
+        metrics = (f'Слов: {chunk["words"]}. ' + count_description(chunk['counts'])
+                   + '. ' + density_description(chunk['densities']))
+        lines.extend(['', title, leaders, metrics])
+        body.extend([f'<h2>{escape(title)}</h2>',
+                     f'<p><b>{escape(leaders)}</b><br>{escape(metrics)}</p>'])
         for sentence in chunk['sentences']:
             heading = f'Предложение {sentence["number"]}'
-            label = 'Лидеры предложения: ' + leader_names(sentence['leaders'])
-            lines.extend([heading + ': ' + sentence['text'], label,
-                          count_description(sentence['counts'])])
+            label = leader_description(sentence['leaders'])
+            metrics = (f'Слов: {sentence["words"]}. ' + count_description(sentence['counts'])
+                       + '. ' + density_description(sentence['densities']))
+            lines.extend([heading + ': ' + sentence['text'], label])
             highlighted, pos = [], 0
             for marker in sentence['markers']:
                 highlighted.extend([escape(sentence['text'][pos:marker['start']]),
@@ -146,14 +166,17 @@ def sentence_report(chunks):
                 pos = marker['end']
             highlighted.append(escape(sentence['text'][pos:]))
             body.extend([f'<h3>{heading}</h3>', '<p>' + ''.join(highlighted) + '</p>',
-                         f'<p><b>{escape(label)}</b><br>{escape(count_description(sentence["counts"]))}</p>'])
-            descriptions = [marker_description(m) for m in sentence['markers']]
-            if descriptions:
-                lines.extend('  Маркер: ' + d for d in descriptions)
-                body.append('<ul>' + ''.join(f'<li>{escape(d)}</li>' for d in descriptions) + '</ul>')
+                         f'<p><b>{escape(label)}</b></p>'])
+            if sentence['markers']:
+                found = 'Найдено: ' + '; '.join(marker_description(m) for m in sentence['markers'])
             else:
-                lines.append('  Маркеры не найдены')
-                body.append('<p>Маркеры не найдены</p>')
+                found = 'В этом предложении не найдены слова из словаря'
+            lines.extend([found, 'Подробности: ' + metrics])
+            lines.extend('  ' + marker_description(m, detailed=True) for m in sentence['markers'])
+            body.extend([f'<p>{escape(found)}</p>', '<details><summary>Подробности</summary>',
+                         f'<p>{escape(metrics)}</p>', '<ul>',
+                         ''.join(f'<li>{escape(marker_description(m, detailed=True))}</li>'
+                                 for m in sentence['markers']), '</ul></details>'])
     html = ('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
             '<title>Эмоциональные кластеры — маркеры</title>'
             '<style>body {font-family:sans-serif; color:#222; background:#fff; margin:24px;} '
@@ -163,7 +186,7 @@ def sentence_report(chunks):
 
 
 def summarize(chunks):
-    totals = [sum(c['counts'][i] for c in chunks) for i in range(8)]
+    totals = [sum(c['counts'][i] for c in chunks) for i in range(len(KEYS))]
     associations = sum(totals)
     n = sum(c['end'] - c['start'] + 1 for c in chunks)
     shares, unknown = [0.] * 8, 0
@@ -218,41 +241,89 @@ def draw_leader_matrix(ax, chunks):
                 ax.add_patch(Rectangle((left, category - .5), width, 1,
                                        facecolor=COLORS[category], linewidth=0))
         else:
-            ax.add_patch(Rectangle((left, -.5), width, 8, facecolor='#eeeeee',
+            ax.add_patch(Rectangle((left, -.5), width, len(KEYS), facecolor='#eeeeee',
                                    edgecolor='#999999', hatch='///', linewidth=0))
         ax.axvline(left, color='#777777', linewidth=.4)
     if chunks:
         ax.axvline(chunks[-1]['end'] + .5, color='#777777', linewidth=.4)
-    for y in np.arange(.5, 7.5):
+    for y in np.arange(.5, len(KEYS) - .5):
         ax.axhline(y, color='#dddddd', linewidth=.4)
-    ax.set_yticks(range(8), LABELS, fontsize=9)
-    ax.set_ylim(7.5, -.5)
-    ax.set_title('Ведущие категории каждого фрагмента — точные цвета', fontsize=10)
+    ax.set_yticks(range(len(KEYS)), LABELS, fontsize=9)
+    ax.set_ylim(len(KEYS) - .5, -.5)
+    ax.set_title('Преобладающие эмоции по фрагментам', fontsize=10)
     ax.set_xlabel('Номер предложения')
+
+
+def draw_density(ax, chunks):
+    """Five constant-per-chunk curves with shared sentence boundaries."""
+    edges = [chunk['start'] - .5 for chunk in chunks]
+    if chunks:
+        edges.append(chunks[-1]['end'] + .5)
+    for category, (label, color) in enumerate(zip(LABELS, COLORS)):
+        values = [100 * chunk['densities'][category] for chunk in chunks]
+        ax.stairs(values, edges, baseline=None, color=color, linewidth=2, label=label)
+    for edge in edges:
+        ax.axvline(edge, color='#aaaaaa', linewidth=.4, zorder=0)
+    if chunks:
+        ax.set_xlim(edges[0], edges[-1])
+    ax.set_ylim(bottom=0)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set(title='Плотность эмоций', xlabel='Номер предложения',
+           ylabel='Маркеров на 100 слов')
+    ax.legend(loc='upper right')
+    ax.grid(axis='y', alpha=.25)
+
+
+def result_paths(prefix):
+    paths = {k: str(prefix) + '_emotions.' + k for k in ('png', 'txt', 'csv', 'html')}
+    paths['density_png'] = str(prefix) + '_emotion_density.png'
+    paths['sentences_csv'] = str(prefix) + '_emotion_sentences.csv'
+    return paths
 
 
 def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix):
     chunks = count_chunks(sentences, chunk_size, lexicon, morph)
     summary = summarize(chunks)
-    paths = {k: str(prefix) + '_emotions.' + k for k in ('png', 'txt', 'csv', 'html')}
+    paths = result_paths(prefix)
+    density_headers = [label + ' — плотность (маркеров/слово)' for label in LABELS]
     with open(paths['csv'], 'w', encoding='utf-8-sig', newline='') as f:
         writer = csv.writer(f, delimiter=';')
-        writer.writerow(['Фрагмент', 'Начало', 'Конец', 'Предложений', 'Слов'] + list(LABELS) + ['Лидеры'])
+        writer.writerow(['Фрагмент', 'Начало', 'Конец', 'Предложений', 'Слов']
+                        + list(LABELS) + density_headers + ['Преобладающие эмоции'])
         for number, c in enumerate(chunks, 1):
-            writer.writerow([number, c['start'], c['end'], c['end'] - c['start'] + 1, c['words']] + c['counts'] + [' / '.join(LABELS[i] for i in c['leaders']) or 'Маркеры не найдены'])
-    lines = ['Эмоциональные кластеры NRC EmoLex 0.92; автоматический русский перевод 2017', 'Авторы: Saif M. Mohammad, Peter D. Turney; NRC Canada', 'https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm', f'SHA256 источника: {digest}', f'Размер фрагмента: {chunk_size}', 'Лексические ассоциации; контекст и отрицания не интерпретируются.', 'Слово с несколькими метками учитывается в каждой категории.', 'Доли текста рассчитаны по предложениям; равные лидеры делят вклад поровну.', '']
+            writer.writerow([number, c['start'], c['end'], c['end'] - c['start'] + 1, c['words']]
+                            + c['counts'] + c['densities'] + [leader_names(c['leaders'])])
+    with open(paths['sentences_csv'], 'w', encoding='utf-8-sig', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+        writer.writerow(['Фрагмент', 'Предложение', 'Текст', 'Слов'] + list(LABELS)
+                        + density_headers + ['Преобладающие эмоции', 'Найденные маркеры и категории'])
+        for number, c in enumerate(chunks, 1):
+            for sentence in c['sentences']:
+                writer.writerow([number, sentence['number'], sentence['text'], sentence['words']]
+                                + sentence['counts'] + sentence['densities']
+                                + [leader_names(sentence['leaders']),
+                                   '; '.join(marker_description(m, detailed=True) for m in sentence['markers'])])
+    lines = ['Эмоциональные кластеры RusEmoLex: злость, грусть, радость, страх, удивление',
+             'Ярошенко П.В., Лукашевич Н.В. RusEmoLex: эмоциональный лексикон для русского языка. '
+             'Russian Journal of Linguistics. 2025. 29(3). 659–687.', PUBLICATION, SOURCE_URL,
+             f'Коммит источника: {SOURCE_COMMIT}', f'SHA256 источника: {digest}',
+             f'Размер фрагмента: {chunk_size}',
+             'Количество вхождений в источники не используется как вес.',
+             'Словосочетание — один маркер; все его слова входят в число слов.',
+             'Доли маркеров рассчитаны по сумме пяти счётчиков, а не по всем словам.',
+             'Доли текста рассчитаны по предложениям; равные категории делят вклад поровну.', '']
     for i, name in enumerate(LABELS):
         lines.append(f'{name}: {summary["totals"][i]}; доля маркеров {summary["marker_shares"][i]:.2%}; доля текста {summary["text_shares"][i]:.2%}')
     lines.append(f'Текст без маркеров: {summary["unknown_share"]:.2%}')
-    lines.extend(['', 'Подсчёты по фрагментам:', Path(paths['csv']).read_text(encoding='utf-8-sig')])
     details, html = sentence_report(chunks)
-    metadata = '<p>' + '<br>'.join(escape(line) for line in lines[:18]) + '</p>'
-    html = html.replace('</body>', '<h2>Сводка и источник</h2>' + metadata + '</body>', 1)
-    lines.extend(['', details])
+    # Keep the plain-language introduction first in both formats.
+    intro, rest = details.split('\n', 1)
+    metadata = '<h2>Сводка и источник</h2><p>' + '<br>'.join(escape(line) for line in lines) + '</p>'
+    html = html.replace('</body>', metadata + '</body>', 1)
     Path(paths['html']).write_text(html, encoding='utf-8')
-    Path(paths['txt']).write_text('\n'.join(lines), encoding='utf-8')
+    Path(paths['txt']).write_text(intro + '\n\n' + '\n'.join(lines) + '\n' + rest, encoding='utf-8')
     fig, (ax, matrix) = plt.subplots(2, 1, figsize=(14, 10), sharex=True,
-                                    gridspec_kw={'height_ratios': [4, 1.6], 'hspace': .18})
+                                    gridspec_kw={'height_ratios': [4, 1.3], 'hspace': .18})
     try:
         x = range(1, len(sentiments) + 1)
         ax.set_facecolor('#f5f5f5')
@@ -266,19 +337,28 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
                     label='Чёрная линия — сглаженная тональность', zorder=4)
             ax.set_xlim(.5, len(sentiments) + .5)
         ax.set_ylim(-1, 1)
-        ax.set(title=f'Тональность и эмоциональные кластеры NRC; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
+        ax.set(title=f'Тональность и эмоциональные кластеры RusEmoLex; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
         ax.tick_params(axis='x', labelbottom=False)
         draw_leader_matrix(matrix, chunks)
         handles, labels = ax.get_legend_handles_labels()
         handles += [Patch(facecolor=color, label=name) for color, name in zip(COLORS, LABELS)]
-        handles.append(Patch(facecolor='#eeeeee', hatch='///', label='Маркеры не найдены'))
-        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=4)
+        handles.append(Patch(facecolor='#eeeeee', hatch='///', label=NO_MARKERS))
+        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=3)
         fig.text(.5, .035,
-                 'Градиент — равные лидеры. Их названия и чистые цвета показаны в матрице под кривой.\n'
-                 'Штриховка — маркеры не найдены; границы фрагментов сохранены.',
+                 'Градиент — равные преобладающие эмоции. Названия показаны в матрице под кривой.\n'
+                 'Штриховка — эмоциональные слова не найдены; границы фрагментов сохранены.',
                  ha='center', fontsize=9)
         fig.subplots_adjust(bottom=.25, left=.11, right=.98)
         fig.savefig(paths['png'], bbox_inches='tight')
+    finally:
+        plt.close(fig)
+    fig, ax = plt.subplots(figsize=(14, 6))
+    try:
+        draw_density(ax, chunks)
+        fig.text(.5, .01, 'Число маркеров категории / число всех слов × 100; это не доля среди эмоциональных слов.',
+                 ha='center', fontsize=9)
+        fig.tight_layout(rect=(0, .04, 1, 1))
+        fig.savefig(paths['density_png'])
     finally:
         plt.close(fig)
     return paths

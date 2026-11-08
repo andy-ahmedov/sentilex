@@ -1,0 +1,4 @@
+# Preserve upstream bytes/checksum, including original CRLF endings.
+scripts/data/RusEmoLex.csv -text whitespace=cr-at-eol
+# Keep the upstream description verbatim, including its original whitespace.
+scripts/data/RusEmoLex.upstream.md -text -whitespace

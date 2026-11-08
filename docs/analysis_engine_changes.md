@@ -6,6 +6,20 @@ changes how input text is processed, measured, plotted, exported, or written to 
 
 The goal is to make engine changes understandable without reading Python code.
 
+## 2026-11-08 - Built-in RusEmoLex and word-normalized emotion density
+
+Files/functions: `scripts/emotions.py` (load_lexicon, normalize_entries, count_chunks, sentence_report, write_results, draw_density, draw_leader_matrix), `scripts/data/*`; desktop worker/controller/UI, dependency manifest and packaging/smoke helpers.
+
+Before: optional external NRC ZIP/XLSX, eight translated categories, saved dictionary path, counts and marker/text shares, four emotion artifacts. Desktop defaulted to 50 sentences when available; there was no word-normalized density plot.
+
+After: always-on built-in original RusEmoLex.csv at commit b485f34def81f622295b28bd7e5558e3581a8a9e, checksum validated before normalization; 1024 rows become 999 normalized keys with unioned categories. Order: anger, sadness, joy, fear, surprise. Source occurrence metadata is never a weight. Longest non-overlapping phrase matching, repeated occurrences and marker offsets are retained. Each sentence and chunk records all alphabetic words, five counts and unrounded count/word densities (zero if no words). Chunk counts/words sum sentence counts/words. All nonzero maximum density classes prevail; a shared denominator preserves the ranking within a chunk while supporting cross-length comparisons.
+
+The existing gradient plot and matrix use five categories; a separate sentence-aligned stair plot displays markers per 100 words. Chunk CSV now includes five density ratios, and a new sentence CSV includes every sentence and its marker evidence. CSV uses decimal ratios with a dot; GUI/TXT/HTML/plot units are per 100 words. Marker/text shares remain separate. TXT/escaped offline HTML contain provenance, chunk/sentence metrics and plain-language marker links. Six files: _emotions.png/.txt/.csv/.html, _emotion_density.png, _emotion_sentences.csv. Desktop defaults to chunk 1 on each selection, clears stale views/actions/files on rerun/error, ignores old NRC settings and no longer requires openpyxl. Windows release name is SentiSoft-RusEmoLex.exe; stage on NTFS without stopping previous user programs.
+
+Why / impact: implement the requested Russian lexicon and comparable density measure with traceable evidence. Emotion category/count/report contracts intentionally change. RuSentiLex scoring, preprocessing/tokenization, tonal chunk arithmetic, emotional phases, tonal TXT/PNG and standalone PY are unchanged; the tone golden is unchanged. No measured accuracy on literary texts is claimed.
+
+Validation: smoke_emotions (1024 rows, five real classes, phrase «без ума», inflections/repeats, normalized union, ties, zero/mixed lengths, aggregate consistency, CSV/TXT/HTML escaping and PNG/stair geometry); five-color fill/matrix pixels; startup/keyboard slider/layout; real threaded GUI with six-file saving, rerun/error clearing, chapter sizes 1/2/3 and dense text; sequential tone export/reanalysis and plot-options checks. Full container HTTP verify passed with unchanged golden; the final integer-only density X-axis refinement also passed the full verify and focused/UI checks. Windows built on NTFS; actual offline worker/UI produced all six outputs and matched tone golden, and archive inspection confirmed CSV, checksum, provenance/original README and build metadata. Final rebuilt SentiSoft-RusEmoLex.exe passed offline frozen smoke with unchanged tone golden; evidence is recorded in PLANS.md.
+
 ## 2026-11-07 - Preserve historical chunk rounding across Python versions
 
 Files/functions:
