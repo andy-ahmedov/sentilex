@@ -22,7 +22,7 @@ def main():
     assert hashlib.sha256(data).hexdigest() == emotions.SOURCE_SHA256
     rows = list(csv.DictReader(data.decode('utf-8').splitlines(), delimiter='\t'))
     assert len(rows) == 14154 and all(key in rows[0] for key in emotions.KEYS)
-    loaded, digest = emotions.load_lexicon(morph)
+    loaded, digest = emotions.load_lexicon(morph, profile='raw')
     expected = {}
     for row in rows:
         categories = {i for i, key in enumerate(emotions.KEYS) if row[key] == '1'}
@@ -118,12 +118,12 @@ def main():
         assert emotions.SOURCE_URL in html and '<details>' in html
         with open(result['csv'], encoding='utf-8-sig', newline='') as f:
             table = list(csv.reader(f, delimiter=';'))
-        assert len(table) == 4 and len(table[0]) == 22
+        assert len(table) == 4 and len(table[0]) == 24
         assert table[1][4] == '6' and float(table[1][16]) == 1 / 3
         with open(result['sentences_csv'], encoding='utf-8-sig', newline='') as f:
             table = list(csv.reader(f, delimiter=';'))
         assert len(table) == len(sentences) + 1 and table[-1][2] == '!!!'
-        assert table[-1][3] == '0' and not table[-1][-1]
+        assert table[-1][3] == '0' and not table[-1][21]
         assert all(float(v) == 0 for v in table[-1][12:20])
     fig, ax = plt.subplots()
     emotions.draw_density(ax, chunks)

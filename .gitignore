@@ -24,3 +24,5 @@ dist/
 # Private, locally bundled NRC 2022 research data (never publish with source).
 scripts/data/nrc2022/
 !tools/prepare_nrc2022.py
+
+!tools/audit_nrc_profile.py

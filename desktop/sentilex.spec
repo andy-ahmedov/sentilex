@@ -17,7 +17,7 @@ metadata_dir = Path(tempfile.mkdtemp(prefix="sentilex-build-info-"))
 build_info = metadata_dir / "build_info.json"
 build_info.write_text(json.dumps({
     "build_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-    "dictionary": "NRC EmoLex 2022", "edition": "NRC2022-research-density",
+    "dictionary": "NRC EmoLex 2022", "edition": "nrc-ru-literary-v1",
 }), encoding="utf-8")
 source_metadata = json.loads((project_root / "scripts/data/NRC2022.SOURCE.json").read_text(encoding="utf-8"))
 source_dictionary = project_root / "scripts/data/nrc2022/Russian-NRC-EmoLex.txt"
@@ -32,6 +32,7 @@ datas = [
     (str(project_root / "scripts/data/NRC2022.SOURCE.json"), "scripts/data"),
     (str(project_root / "scripts/data/NRC2022.SOURCE.md"), "scripts/data"),
     (str(project_root / "scripts/data/NRC2022.sha256"), "scripts/data"),
+    (str(project_root / "scripts/data/NRC2022.LITERARY.json"), "scripts/data"),
     (str(project_root / "desktop" / "ui" / "main.ui"), "desktop/ui"),
     (str(project_root / "desktop" / "style.qss"), "desktop"),
     (str(project_root / "scripts" / "RuSentilex-2017.txt"), "scripts"),
@@ -65,7 +66,7 @@ if onefile:
         analysis.zipfiles,
         analysis.datas,
         [],
-        name="SentiSoft-NRC2022",
+        name="SentiSoft-NRC2022-Literary",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -85,7 +86,7 @@ else:
         analysis.scripts,
         [],
         exclude_binaries=True,
-        name="SentiSoft-NRC2022",
+        name="SentiSoft-NRC2022-Literary",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -105,5 +106,5 @@ else:
         strip=False,
         upx=True,
         upx_exclude=[],
-        name="SentiSoft-NRC2022",
+        name="SentiSoft-NRC2022-Literary",
     )

@@ -6,6 +6,20 @@ changes how input text is processed, measured, plotted, exported, or written to 
 
 The goal is to make engine changes understandable without reading Python code.
 
+## 2026-11-08 - Conservative Russian literary NRC profile v1
+
+Files/functions: scripts/data/NRC2022.LITERARY.json; scripts/emotions.py::read_literary_profile/profile_metadata/apply_literary_profile/load_lexicon/write_results; desktop profile selector/worker, build metadata/spec/helpers; smoke_emotion_profile and affected report/GUI checks. The original local NRC source remains unchanged and private.
+
+Before: all original Russian translations were normalized and merged, including function-word/translation artifacts; only raw NRC mode was exposed. CSV had no explicit dictionary-profile identity.
+
+After: literary (default) applies four guarded entry decisions plus a closed single-token exclusion policy before normalization. Five source rows are excluded (aga, wot, excluding, opposed, versus), and two translations narrowed/corrected (spite→злоба, nothingness→небытие). All eight emotion tags of every retained row are unchanged; other rows are byte-field-equivalent. Source-row guards check English ID, expected Russian text and expected tags. Raw source SHA stays 96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a. Raw mode reproduces 3707 keys; edited mode has 3702. Rules id nrc-ru-literary-v1, canonical JSON SHA256 cbd2607a69f63549552956dd71ffb56f2ba99b76531646438499edae274a29e7. GUI offers both modes, disables the selector during work and clears results on change. TXT/HTML and PNG captions identify the profile; both CSVs append profile ID/SHA256 columns. Filename bases remain unchanged. Local exe is SentiSoft-NRC2022-Literary.exe; previous executables retained.
+
+Why / scope: user chose cautious fixes for general artistic prose, explicitly excluding fitting to Anna Karenina. All 14154 source rows were inspected programmatically for service/pronominal candidate readings; 17 candidates reviewed, ten ambiguous valid readings retained. Decisions use source meaning/grammar, not any novel's frequencies or desired dominant category. Audit/rationale and deferred ambiguities are in docs/lexicons/nrc_ru_literary_v1.md. This is a small editorial profile, not a full translation or measured literary-accuracy improvement.
+
+Preserved: original source bytes, unaffected translations/tags, longest non-overlapping phrase matching, repeated markers, all words in density denominators, ties, shares, segmentation/default 1 and tone RuSentiLex/phases/standalone export. Function words inside expressions are retained; no generic negation/irony inference or emotion reweighting is added. Tradeoffs of narrow replacement and suppressed homographs are explicit.
+
+Validation: fail-first missing-profile check then smoke_emotion_profile passed (seven decisions, untouched source/other tags, mismatched-row rejection, source/raw modes, independent prose/grammar, expressions/denominators, unchanged existing negation/phrase matching and report provenance). Counts/fills, startup/keyboard slider/layout and actual threaded GUI with raw↔edited switching, saving, rerun/error cleanup, chapter 1/2/3 and dense rendering passed. Sequential tone export/reanalysis, plot options and full container HTTP verify passed with unchanged golden. Local Windows build/frozen literary mode passed; raw-mode release evidence and artifact hash are recorded in PLANS.md. No dictionary/score edits were selected from a novel's output.
+
 ## 2026-11-08 - NRC EmoLex Russian 2022 local research build
 
 Files/functions: scripts/emotions.py (normalize_entries/load_lexicon, source_metadata, report/plot labels and summarize), desktop main/spec/build metadata, smoke checks, tools/prepare_nrc2022.py, Windows build/frozen helpers, .gitignore/.dockerignore and NRC2022 source metadata.

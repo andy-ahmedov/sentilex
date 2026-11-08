@@ -52,7 +52,78 @@ def normalize_entries(rows, morph):
     return lexicon
 
 
-def load_lexicon(morph):
+LITERARY_PROFILE_PATH = DATA_DIR / 'NRC2022.LITERARY.json'
+DEFAULT_PROFILE = 'literary'
+PROFILE_LABELS = {
+    'literary': 'NRC 2022 — правки для прозы (v1)',
+    'raw': 'NRC 2022 — исходный перевод',
+}
+
+
+def read_literary_profile():
+    rules = json.loads(LITERARY_PROFILE_PATH.read_text(encoding='utf-8'))
+    if (rules['source_sha256'] != SOURCE_SHA256
+            or rules['id'] != 'nrc-ru-literary-v1' or rules['version'] != 1):
+        raise ValueError('Профиль правок не соответствует версии словаря')
+    return rules
+
+
+def profile_metadata(profile=DEFAULT_PROFILE):
+    if profile == 'raw':
+        return dict(id='nrc-ru-2022-raw', label=PROFILE_LABELS['raw'],
+                    sha256=SOURCE_SHA256, source_sha256=SOURCE_SHA256)
+    if profile != 'literary':
+        raise ValueError(f'Неизвестный профиль словаря: {profile}')
+    rules = read_literary_profile()
+    canonical = json.dumps(rules, ensure_ascii=False, sort_keys=True,
+                           separators=(',', ':')).encode('utf-8')
+    return dict(id=rules['id'], label=rules['label'],
+                sha256=hashlib.sha256(canonical).hexdigest(), source_sha256=SOURCE_SHA256)
+
+
+def apply_literary_profile(rows):
+    """Apply guarded source-row corrections before normalization/category union."""
+    rules = read_literary_profile()
+    edits = {entry['english']: entry for entry in rules['entry_edits']}
+    if len(edits) != len(rules['entry_edits']):
+        raise ValueError('Повторная правка одной исходной записи')
+    excluded = set(rules['excluded_single_tokens'])
+    revised, changes, found = [], [], set()
+    for original in rows:
+        row = dict(original)
+        english = row['English Word']
+        entry = edits.get(english)
+        if entry:
+            actual = {key for key in KEYS if row[key] == '1'}
+            if (english in found or row['Russian Word'] != entry['expected_russian']
+                    or actual != set(entry['expected_emotions'])):
+                raise ValueError(f'Правка не соответствует исходной записи: {english}')
+            found.add(english)
+            if entry['action'] not in ('exclude', 'replace'):
+                raise ValueError(f'Неизвестное действие правки: {english}')
+            changes.append(dict(english=english, before=row['Russian Word'],
+                                after=entry.get('russian'), action=entry['action'],
+                                rule='entry', reason=entry['reason']))
+            if entry['action'] == 'exclude':
+                continue
+            if not entry.get('russian') or not TOKEN.search(entry['russian']):
+                raise ValueError(f'Пустое исправленное соответствие: {english}')
+            row['Russian Word'] = entry['russian']
+        surface = TOKEN.findall(row['Russian Word'].lower().replace('ё', 'е'))
+        if (len(surface) == 1 and surface[0] in excluded
+                and any(row[key] == '1' for key in KEYS)):
+            changes.append(dict(english=english, before=row['Russian Word'], after=None,
+                                action='exclude', rule='single_function_token',
+                                reason=rules['single_token_reason']))
+            continue
+        revised.append(row)
+    missing = set(edits) - found
+    if missing:
+        raise ValueError('Не найдены исходные записи для правок: ' + ', '.join(sorted(missing)))
+    return revised, changes
+
+
+def load_lexicon(morph, profile=DEFAULT_PROFILE):
     try:
         data = LEXICON_PATH.read_bytes()
     except FileNotFoundError as exc:
@@ -68,6 +139,10 @@ def load_lexicon(morph):
             or any(row[key] not in ('0', '1') for row in rows for key in KEYS)
             or any(not any(row[key] == '1' for row in rows) for key in KEYS)):
         raise ValueError('Неверный состав встроенного NRC EmoLex 2022')
+    if profile == 'literary':
+        rows, _ = apply_literary_profile(rows)
+    elif profile != 'raw':
+        raise ValueError(f'Неизвестный профиль словаря: {profile}')
     return normalize_entries(rows, morph), digest
 
 
@@ -301,7 +376,11 @@ def result_paths(prefix):
     return paths
 
 
-def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix):
+def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, prefix,
+                  profile=DEFAULT_PROFILE):
+    profile_info = profile_metadata(profile)
+    profile_fields = [profile_info['id'], profile_info['sha256']]
+    profile_headers = ['Профиль словаря', 'SHA256 профиля']
     chunks = count_chunks(sentences, chunk_size, lexicon, morph)
     summary = summarize(chunks)
     paths = result_paths(prefix)
@@ -309,26 +388,28 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
     with open(paths['csv'], 'w', encoding='utf-8-sig', newline='') as f:
         writer = csv.writer(f, delimiter=';')
         writer.writerow(['Фрагмент', 'Начало', 'Конец', 'Предложений', 'Слов']
-                        + list(LABELS) + density_headers + ['Преобладающие эмоции'])
+                        + list(LABELS) + density_headers + ['Преобладающие эмоции'] + profile_headers)
         for number, c in enumerate(chunks, 1):
             writer.writerow([number, c['start'], c['end'], c['end'] - c['start'] + 1, c['words']]
-                            + c['counts'] + c['densities'] + [leader_names(c['leaders'])])
+                            + c['counts'] + c['densities'] + [leader_names(c['leaders'])] + profile_fields)
     with open(paths['sentences_csv'], 'w', encoding='utf-8-sig', newline='') as f:
         writer = csv.writer(f, delimiter=';')
         writer.writerow(['Фрагмент', 'Предложение', 'Текст', 'Слов'] + list(LABELS)
-                        + density_headers + ['Преобладающие эмоции', 'Найденные маркеры и категории'])
+                        + density_headers + ['Преобладающие эмоции', 'Найденные маркеры и категории'] + profile_headers)
         for number, c in enumerate(chunks, 1):
             for sentence in c['sentences']:
                 writer.writerow([number, sentence['number'], sentence['text'], sentence['words']]
                                 + sentence['counts'] + sentence['densities']
                                 + [leader_names(sentence['leaders']),
-                                   '; '.join(marker_description(m, detailed=True) for m in sentence['markers'])])
+                                   '; '.join(marker_description(m, detailed=True) for m in sentence['markers'])] + profile_fields)
     lines = ['Эмоциональные кластеры NRC EmoLex 0.92; русский перевод 2022',
              'Авторы: Saif M. Mohammad, Peter D. Turney; National Research Council Canada.',
              'Английские эмоциональные метки: ручная краудсорсинговая разметка.',
              'Русский перевод: Google Translate, август 2022; не ручная русская разметка.',
              PUBLICATION, SOURCE_URL,
              f'SHA256 русского источника: {digest}',
+             f'Профиль словаря: {profile_info["label"]} ({profile_info["id"]})',
+             f'SHA256 профиля: {profile_info["sha256"]}',
              f'Записей в исходной русской таблице: {SOURCE_ROWS}',
              f'Размер фрагмента: {chunk_size}',
              'Одно вхождение учитывается один раз в каждой связанной категории.',
@@ -346,6 +427,7 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
     html = html.replace('</body>', metadata + '</body>', 1)
     Path(paths['html']).write_text(html, encoding='utf-8')
     Path(paths['txt']).write_text(intro + '\n\n' + '\n'.join(lines) + '\n' + rest, encoding='utf-8')
+    profile_caption = f'{profile_info["id"]}; SHA256 профиля {profile_info["sha256"][:12]}…'
     fig, (ax, matrix) = plt.subplots(2, 1, figsize=(14, 10), sharex=True,
                                     gridspec_kw={'height_ratios': [4, 1.8], 'hspace': .18})
     try:
@@ -361,7 +443,7 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
                     label='Чёрная линия — сглаженная тональность', zorder=4)
             ax.set_xlim(.5, len(sentiments) + .5)
         ax.set_ylim(-1, 1)
-        ax.set(title=f'Тональность и эмоциональные кластеры NRC 2022; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
+        ax.set(title=f'{profile_info["label"]}; размер фрагмента: {chunk_size} предл.', ylabel='Тональность [-1; 1]')
         ax.tick_params(axis='x', labelbottom=False)
         draw_leader_matrix(matrix, chunks)
         handles, labels = ax.get_legend_handles_labels()
@@ -370,7 +452,7 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
         fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(.5, .16), ncol=4)
         fig.text(.5, .035,
                  'Градиент — равные преобладающие эмоции. Названия показаны в матрице под кривой.\n'
-                 'Штриховка — эмоциональные слова не найдены; границы фрагментов сохранены.',
+                 'Штриховка — эмоциональные слова не найдены; границы фрагментов сохранены.\n' + profile_caption,
                  ha='center', fontsize=9)
         fig.subplots_adjust(bottom=.25, left=.11, right=.98)
         fig.savefig(paths['png'], bbox_inches='tight')
@@ -379,9 +461,9 @@ def write_results(sentences, sentiments, chunk_size, lexicon, digest, morph, pre
     fig, ax = plt.subplots(figsize=(14, 6))
     try:
         draw_density(ax, chunks)
-        fig.text(.5, .01, 'Число маркеров категории / число всех слов × 100; это не доля среди эмоциональных слов.',
+        fig.text(.5, .01, 'Число маркеров категории / число всех слов × 100; это не доля среди эмоциональных слов.\n' + profile_caption,
                  ha='center', fontsize=9)
-        fig.tight_layout(rect=(0, .04, 1, 1))
+        fig.tight_layout(rect=(0, .07, 1, 1))
         fig.savefig(paths['density_png'])
     finally:
         plt.close(fig)

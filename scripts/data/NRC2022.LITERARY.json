@@ -1,0 +1,45 @@
+{
+  "id": "nrc-ru-literary-v1",
+  "version": 1,
+  "label": "NRC 2022 — правки для прозы (v1)",
+  "source_sha256": "96849cb99a395e1e749030fa6c115860e2664f7690a1beac82c47485d42ce75a",
+  "scope": "Осторожная редактура перевода для художественной прозы в целом; без подгонки по отдельному произведению и без изменения эмоциональных меток.",
+  "excluded_single_tokens": ["что", "несмотря", "против", "исключая"],
+  "single_token_reason": "Однословное служебное/местоименное соответствие само по себе не является эмоциональным маркером; слова внутри многословного выражения не удаляются.",
+  "entry_edits": [
+    {
+      "english": "wot",
+      "expected_russian": "что",
+      "expected_emotions": ["trust"],
+      "action": "exclude",
+      "reason": "Английский глагол со значением know ошибочно дал русское союзное/местоименное что; надёжный перенос эмоционального смысла без контекста невозможен.",
+      "references": ["https://www.merriam-webster.com/dictionary/wot"]
+    },
+    {
+      "english": "aga",
+      "expected_russian": "ага",
+      "expected_emotions": ["fear", "trust"],
+      "action": "exclude",
+      "reason": "Английское aga обозначает титул; та же строка совпадает с русской разговорной частицей/междометием. Без контекстного различения не переносим метки титула на реплику ага.",
+      "references": ["https://www.merriam-webster.com/dictionary/aga"]
+    },
+    {
+      "english": "spite",
+      "expected_russian": "несмотря",
+      "expected_emotions": ["anger"],
+      "action": "replace",
+      "russian": "злоба",
+      "reason": "Восстановлен эмоциональный смысл отдельного spite; несмотря относится к обороту in spite of. Исходная метка anger сохранена.",
+      "references": ["https://dictionary.cambridge.org/us/dictionary/english-russian/spite"]
+    },
+    {
+      "english": "nothingness",
+      "expected_russian": "ничто",
+      "expected_emotions": ["sadness"],
+      "action": "replace",
+      "russian": "небытие",
+      "reason": "Уточнено абстрактное существительное со значением nonexistence/nonbeing, чтобы не размечать обычное отрицательное местоимение ничто. Исходная метка sadness сохранена; это редакторский выбор более узкого соответствия.",
+      "references": ["https://www.collinsdictionary.com/us/dictionary/english/nothingness"]
+    }
+  ]
+}

@@ -13,6 +13,7 @@ from PySide6.QtGui import QDesktopServices, QPixmap, QTextCursor
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QBoxLayout,
     QFileDialog,
     QDialog,
@@ -116,9 +117,10 @@ class AnalysisWorker(QObject):
     finished = Signal(dict)
     failed = Signal(str)
 
-    def __init__(self, file_path: Path, chunk_size: int, chapter_label_step=1) -> None:
+    def __init__(self, file_path: Path, chunk_size: int, chapter_label_step=1, emotion_profile='literary') -> None:
         super().__init__()
         self.chapter_label_step = chapter_label_step
+        self.emotion_profile = emotion_profile
         self.file_path = file_path
         self.chunk_size = chunk_size
 
@@ -131,7 +133,7 @@ class AnalysisWorker(QObject):
             # Never expose artifacts from a previous or incomplete analysis.
             for path in emotion_paths.values():
                 Path(path).unlink(missing_ok=True)
-            lexicon, digest = emotions.load_lexicon(web_app.functions.morph_vocab)
+            lexicon, digest = emotions.load_lexicon(web_app.functions.morph_vocab, profile=self.emotion_profile)
             artifacts = web_app.process_text(
                 str(self.file_path),
                 filename,
@@ -152,7 +154,9 @@ class AnalysisWorker(QObject):
             artifacts["emotions"] = emotions.write_results(
                 data["sentences"], data["sentiments"], self.chunk_size, lexicon,
                 digest, web_app.functions.morph_vocab, result_txt.parent / filename,
+                profile=self.emotion_profile,
             )
+            artifacts['emotion_profile'] = self.emotion_profile
             self.finished.emit(artifacts)
         except Exception as exc:  # noqa: BLE001
             for path in emotion_paths.values():
@@ -227,19 +231,31 @@ class MainWindowController(QObject):
                 layout.insertWidget(index + 2, self.chapter_step)
                 break
         self.chunk_number.valueChanged.connect(self._on_chunk_number_changed)
+        from scripts import emotions
+        self.emotion_profile = QComboBox()
+        self.emotion_profile.setObjectName("emotionDictionaryProfile")
+        for key in ('literary', 'raw'):
+            self.emotion_profile.addItem(emotions.PROFILE_LABELS[key], key)
+        self.emotion_profile.setToolTip(
+            "Правки для прозы v1: явные ошибки перевода и служебные слова. "
+            "Исходный перевод оставлен для сравнения. После смены повторите анализ.")
+        profile_label = QLabel("Профиль эмоционального словаря")
+        profile_label.setStyleSheet("color:#483d65; background:transparent;")
+        self.control_panel.layout().addWidget(profile_label)
+        self.control_panel.layout().addWidget(self.emotion_profile)
         self.emotion_results = {}
         self.emotion_save_buttons = {}
         import json
         info = json.loads(resource_path('desktop', 'build_info.json').read_text(encoding='utf-8'))
-        self.version_label = QLabel(f'NRC EmoLex 2022 · сборка {info["build_date"]}')
+        self.version_label = QLabel(f'NRC 2022 · правки для прозы v1 · сборка {info["build_date"]}')
         self.version_label.setWordWrap(True)
         self.version_label.setStyleSheet("color:#483d65; background:transparent;")
         self.version_label.setToolTip(
-            "NRC EmoLex: восемь эмоций. Saif M. Mohammad, Peter D. Turney; NRC Canada. "
+            "NRC EmoLex: восемь эмоций; доступны исправленный v1 и исходный профиль. Saif M. Mohammad, Peter D. Turney; NRC Canada. "
             "Русский перевод: Google Translate, август 2022. Контекст, отрицания и ирония не учитываются. "
             "https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm")
         self.control_panel.layout().addWidget(self.version_label)
-        self.window.setWindowTitle(f'SentiSoft · NRC2022 · {info["build_date"]}')
+        self.window.setWindowTitle(f'SentiSoft · NRC2022-Literary · {info["build_date"]}')
         self.plot_tabs = QTabWidget()
         self.plot_tabs.setStyleSheet("QTabWidget::pane {background:#faf9ff; border:1px solid #d8ccff;} QTabBar::tab {background:#eee8ff; color:#5632c3; padding:7px 14px;} QTabBar::tab:selected {background:#faf9ff; font-weight:bold;} QWidget {background:#faf9ff; color:#483d65;} QPushButton {background:#eee8ff; color:#5632c3; border:1px solid #d8ccff; border-radius:8px; padding:6px;}")
         index = self.results_splitter.indexOf(self.plot_preview)
@@ -298,6 +314,7 @@ class MainWindowController(QObject):
 
         self.chunk_slider.valueChanged.connect(self._on_chunk_changed)
         self.browse_button.clicked.connect(self.choose_file)
+        self.emotion_profile.currentIndexChanged.connect(self._on_emotion_profile_changed)
         self.submit_button.clicked.connect(self.start_analysis)
         self.download_txt_button.clicked.connect(self.save_txt_result)
         self.download_png_button.clicked.connect(self.save_png_result)
@@ -525,7 +542,15 @@ class MainWindowController(QObject):
         self.status_label.setText("Состояние: готово к анализу")
         self.submit_button.setEnabled(True)
 
+    @Slot(int)
+    def _on_emotion_profile_changed(self, index):
+        if self.analysis_in_progress:
+            return
+        self.clear_results("Профиль словаря изменён. Выполните анализ заново.")
+        self.status_label.setText("Состояние: готово к анализу" if self.selected_file else "Состояние: ожидание файла")
+
     def _set_analyzing_state(self) -> None:
+        self.emotion_profile.setEnabled(False)
         self.analysis_in_progress = True
         self.chunk_number.setEnabled(False)
         self.chapter_step.setEnabled(False)
@@ -542,6 +567,7 @@ class MainWindowController(QObject):
         self._set_plot_click_enabled(False)
 
     def _set_done_state(self) -> None:
+        self.emotion_profile.setEnabled(not self.analysis_in_progress)
         self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
         self.chapter_step.setEnabled(True)
         self.status_label.setText("Состояние: анализ завершён")
@@ -557,6 +583,7 @@ class MainWindowController(QObject):
         self._set_plot_click_enabled(self.current_plot_pixmap is not None)
 
     def _set_error_state(self, message: str) -> None:
+        self.emotion_profile.setEnabled(not self.analysis_in_progress)
         self.chunk_number.setEnabled(bool(self.allowed_chunk_sizes))
         self.chapter_step.setEnabled(True)
         self.status_label.setText("Состояние: ошибка анализа")
@@ -591,7 +618,7 @@ class MainWindowController(QObject):
 
         chunk_size = self.allowed_chunk_sizes[self.chunk_slider.value()]
         self.thread = QThread(self.window)
-        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.chapter_step.value())
+        self.worker = AnalysisWorker(self.selected_file, chunk_size, self.chapter_step.value(), self.emotion_profile.currentData())
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -609,6 +636,7 @@ class MainWindowController(QObject):
     @Slot()
     def _cleanup_worker(self) -> None:
         self.analysis_in_progress = False
+        self.emotion_profile.setEnabled(True)
         self.thread = None
         self.worker = None
 
@@ -821,6 +849,7 @@ class PackagedSmokeReceiver(QObject):
                                            checksum_exists=(emotions.DATA_DIR / 'NRC2022.sha256').is_file(),
                                            translation=emotions.source_metadata()['translation'],
                                            readme_exists=(emotions.DATA_DIR / 'nrc2022' / 'README.txt').is_file(),
+                                           profile=emotions.profile_metadata(artifacts['emotion_profile']),
                                            offline=os.environ.get('SENTILEX_SMOKE_OFFLINE') == '1')
             self.controller.plot_tabs.setCurrentIndex(2)
             self.app.processEvents()
@@ -893,7 +922,10 @@ def main() -> int:
     if os.environ.get("SENTILEX_SMOKE_INPUT"):
         import json
         report = Path(os.environ["SENTILEX_SMOKE_REPORT"])
-        worker = AnalysisWorker(Path(os.environ["SENTILEX_SMOKE_INPUT"]), 50)
+        smoke_profile = os.environ.get("SENTILEX_SMOKE_PROFILE", "literary")
+        controller.emotion_profile.setCurrentIndex(controller.emotion_profile.findData(smoke_profile))
+        worker = AnalysisWorker(Path(os.environ["SENTILEX_SMOKE_INPUT"]), 50,
+                                emotion_profile=smoke_profile)
         thread = QThread(window)
         worker.moveToThread(thread)
         receiver = PackagedSmokeReceiver(controller, app, thread, report)
